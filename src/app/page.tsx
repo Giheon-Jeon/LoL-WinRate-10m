@@ -71,6 +71,12 @@ export default function Home() {
   const [isPredicting, setIsPredicting] = useState<boolean>(false);
   const [predictionError, setPredictionError] = useState<string | null>(null);
 
+  // Scoreboard Vision Scanning States
+  const [isScanning, setIsScanning] = useState<boolean>(false);
+  const [scanError, setScanError] = useState<string | null>(null);
+  const [scanSuccessMsg, setScanSuccessMsg] = useState<string | null>(null);
+  const [highlightedFields, setHighlightedFields] = useState<string[]>([]);
+
   // Fetch metrics from backend
   const fetchMetrics = useCallback(async () => {
     setLoadingMetrics(true);
@@ -129,6 +135,105 @@ export default function Home() {
       setIsPredicting(false);
     }
   }, [features, selectedModel, API_URL]);
+
+  // Handle Scoreboard Image Scanning via FastAPI Vision API
+  const handleImageUpload = useCallback(async (file: File) => {
+    setIsScanning(true);
+    setScanError(null);
+    setScanSuccessMsg(null);
+    setHighlightedFields([]);
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+      const res = await fetch(`${API_URL}/api/parse-scoreboard`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) {
+        throw new Error("스코어보드 이미지 분석에 실패했습니다.");
+      }
+
+      const data = await res.json();
+      
+      if (data.is_mocked) {
+        setScanSuccessMsg("데모 모드: 예시 이미지를 기준으로 분석된 데이터가 주입되었습니다. (.env에 GEMINI_API_KEY를 설정하시면 실제 이미지가 분석됩니다)");
+      } else {
+        setScanSuccessMsg("성공: 스코어보드 이미지의 수치가 정확하게 감지 및 주입되었습니다!");
+      }
+
+      const newFeatures = {
+        blueWardsPlaced: typeof data.blueWardsPlaced === "number" ? data.blueWardsPlaced : features.blueWardsPlaced,
+        blueWardsDestroyed: typeof data.blueWardsDestroyed === "number" ? data.blueWardsDestroyed : features.blueWardsDestroyed,
+        blueFirstBlood: typeof data.blueFirstBlood === "number" ? data.blueFirstBlood : features.blueFirstBlood,
+        blueKills: typeof data.blueKills === "number" ? data.blueKills : features.blueKills,
+        blueDeaths: typeof data.blueDeaths === "number" ? data.blueDeaths : features.blueDeaths,
+        blueAssists: typeof data.blueAssists === "number" ? data.blueAssists : features.blueAssists,
+        blueDragons: typeof data.blueDragons === "number" ? data.blueDragons : features.blueDragons,
+        blueHeralds: typeof data.blueHeralds === "number" ? data.blueHeralds : features.blueHeralds,
+        blueTowersDestroyed: typeof data.blueTowersDestroyed === "number" ? data.blueTowersDestroyed : features.blueTowersDestroyed,
+        blueTotalGold: typeof data.blueTotalGold === "number" ? data.blueTotalGold : features.blueTotalGold,
+        blueTotalExperience: typeof data.blueTotalExperience === "number" ? data.blueTotalExperience : features.blueTotalExperience,
+        blueTotalMinionsKilled: typeof data.blueTotalMinionsKilled === "number" ? data.blueTotalMinionsKilled : features.blueTotalMinionsKilled,
+        blueTotalJungleMinionsKilled: typeof data.blueTotalJungleMinionsKilled === "number" ? data.blueTotalJungleMinionsKilled : features.blueTotalJungleMinionsKilled,
+        
+        redWardsPlaced: typeof data.redWardsPlaced === "number" ? data.redWardsPlaced : features.redWardsPlaced,
+        redWardsDestroyed: typeof data.redWardsDestroyed === "number" ? data.redWardsDestroyed : features.redWardsDestroyed,
+        redKills: typeof data.redKills === "number" ? data.redKills : features.redKills,
+        redDeaths: typeof data.redDeaths === "number" ? data.redDeaths : features.redDeaths,
+        redAssists: typeof data.redAssists === "number" ? data.redAssists : features.redAssists,
+        redDragons: typeof data.redDragons === "number" ? data.redDragons : features.redDragons,
+        redHeralds: typeof data.redHeralds === "number" ? data.redHeralds : features.redHeralds,
+        redTowersDestroyed: typeof data.redTowersDestroyed === "number" ? data.redTowersDestroyed : features.redTowersDestroyed,
+        redTotalGold: typeof data.redTotalGold === "number" ? data.redTotalGold : features.redTotalGold,
+        redTotalExperience: typeof data.redTotalExperience === "number" ? data.redTotalExperience : features.redTotalExperience,
+        redTotalMinionsKilled: typeof data.redTotalMinionsKilled === "number" ? data.redTotalMinionsKilled : features.redTotalMinionsKilled,
+        redTotalJungleMinionsKilled: typeof data.redTotalJungleMinionsKilled === "number" ? data.redTotalJungleMinionsKilled : features.redTotalJungleMinionsKilled,
+      };
+
+      setFeatures(newFeatures);
+
+      // Trigger highlighters for changed fields
+      const changed: string[] = [];
+      Object.keys(newFeatures).forEach((key) => {
+        if (newFeatures[key as keyof typeof newFeatures] !== features[key as keyof typeof features]) {
+          changed.push(key);
+        }
+      });
+      setHighlightedFields(changed);
+
+      // Clear highlights after 4 seconds
+      setTimeout(() => {
+        setHighlightedFields([]);
+      }, 4000);
+
+      // Request new prediction immediately
+      getPrediction(newFeatures, selectedModel);
+
+    } catch (err: unknown) {
+      console.error(err);
+      const msg = err instanceof Error ? err.message : String(err);
+      setScanError(msg || "이미지 분석 오류가 발생했습니다.");
+    } finally {
+      setIsScanning(false);
+    }
+  }, [features, selectedModel, getPrediction, API_URL]);
+
+  // Support pasting image from clipboard directly
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      if (e.clipboardData && e.clipboardData.files && e.clipboardData.files[0]) {
+        const file = e.clipboardData.files[0];
+        if (file.type.startsWith("image/")) {
+          handleImageUpload(file);
+        }
+      }
+    };
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, [handleImageUpload]);
 
   // Trigger Model Re-training
   const handleRetrain = async () => {
@@ -210,7 +315,7 @@ export default function Home() {
         <h1 style={{ fontSize: "2.8rem", color: "var(--gold-bright)", textShadow: "0 0 20px rgba(200, 170, 110, 0.4)", marginBottom: "0.5rem" }}>
           HEXTECH Early Predictor
         </h1>
-        <p style={{ color: "var(--text-secondary)", fontSize: "1.1rem", textTransform: "uppercase", letterSpacing: "0.15em", color: "var(--gold-main)" }}>
+        <p style={{ color: "var(--gold-main)", fontSize: "1.1rem", textTransform: "uppercase", letterSpacing: "0.15em" }}>
           early 10-minute lol match winrate ml engine
         </p>
         <div style={{ width: "120px", height: "1px", background: "var(--gold-main)", margin: "1rem auto" }}></div>
@@ -221,6 +326,82 @@ export default function Home() {
         
         {/* LEFT COLUMN: INTERACTIVE CONTROLLER (SANDBOX) */}
         <section style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
+          
+          {/* HEXTECH SCOREBOARD VISION SCANNER */}
+          <div className="card-hextech scanner-container" style={{ padding: "2rem" }}>
+            {isScanning && <div className="scanner-laser"></div>}
+            
+            <h2 style={{ fontSize: "1.4rem", marginBottom: "1rem", borderBottom: "1px solid var(--border-gold)", paddingBottom: "0.5rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <span>👁️ HEXTECH VISION SCOREBOARD SCANNER</span>
+              <span style={{ fontSize: "0.75rem", background: "rgba(200, 170, 110, 0.1)", padding: "0.2rem 0.5rem", borderRadius: "3px", color: "var(--gold-main)" }}>BETA</span>
+            </h2>
+            
+            <p style={{ fontSize: "0.9rem", color: "var(--text-secondary)", marginBottom: "1.2rem" }}>
+              인게임 스코어보드(Tab키 화면) 캡처본을 업로드해 보세요! AI가 인게임 데이터(KDA, CS, 레벨 등)를 감지하여 예측 모델에 맞게 자동으로 채워줍니다.
+            </p>
+
+            {/* Upload Area */}
+            <div 
+              className="upload-zone"
+              onClick={() => document.getElementById("scoreboard-file-input")?.click()}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                  handleImageUpload(e.dataTransfer.files[0]);
+                }
+              }}
+            >
+              <input 
+                id="scoreboard-file-input"
+                type="file" 
+                accept="image/*" 
+                style={{ display: "none" }} 
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    handleImageUpload(e.target.files[0]);
+                  }
+                }}
+              />
+              
+              {isScanning ? (
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "1rem" }}>
+                  <div style={{ width: "40px", height: "40px", border: "3px solid var(--gold-dark)", borderTop: "3px solid var(--gold-bright)", borderRadius: "50%", animation: "spin 1s linear infinite" }}></div>
+                  <p style={{ color: "var(--gold-bright)", fontWeight: "bold", fontFamily: "var(--font-display)" }}>헥스테크 마법 공학 렌즈 분석 중...</p>
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "0.5rem" }}>
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--gold-main)" }}>
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" y1="3" x2="12" y2="15" />
+                  </svg>
+                  <p style={{ fontWeight: "bold", color: "var(--text-primary)" }}>이미지를 드래그 앤 드롭하거나 클릭하여 업로드</p>
+                  <p style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>PNG, JPG, WebP 지원 (클립보드 스크린샷 붙여넣기 가능)</p>
+                </div>
+              )}
+            </div>
+
+            {/* Feedback messages */}
+            {scanSuccessMsg && (
+              <div style={{ marginTop: "1rem", color: "var(--gold-bright)", padding: "0.75rem 1rem", background: "rgba(200, 170, 110, 0.08)", borderRadius: "6px", border: "1px solid rgba(200, 170, 110, 0.2)", fontSize: "0.85rem", display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                <span>✨</span>
+                <span>{scanSuccessMsg}</span>
+              </div>
+            )}
+
+            {scanError && (
+              <div style={{ marginTop: "1rem", color: "var(--red-team)", padding: "0.75rem 1rem", background: "rgba(232, 64, 87, 0.08)", borderRadius: "6px", border: "1px solid rgba(232, 64, 87, 0.2)", fontSize: "0.85rem", display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                <span>⚠️</span>
+                <span>{scanError}</span>
+              </div>
+            )}
+          </div>
+
           <div className="card-hextech" style={{ padding: "2rem" }}>
             <h2 style={{ fontSize: "1.4rem", marginBottom: "1.5rem", borderBottom: "1px solid var(--border-gold)", paddingBottom: "0.5rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span>🎮 EARLY GAME SANDBOX (10 MINS)</span>
@@ -246,7 +427,7 @@ export default function Home() {
                 </h3>
 
                 {/* Blue Kills Slider */}
-                <div style={{ marginBottom: "1.2rem" }}>
+                <div className={highlightedFields.includes("blueKills") ? "highlight-pulse" : ""} style={{ marginBottom: "1.2rem", padding: highlightedFields.includes("blueKills") ? "0.5rem" : "0", transition: "all 0.3s ease" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.9rem" }}>
                     <span>총 킬수 (Kills)</span>
                     <strong className="text-blue">{features.blueKills}</strong>
@@ -259,7 +440,7 @@ export default function Home() {
                 </div>
 
                 {/* Blue Total Gold Slider */}
-                <div style={{ marginBottom: "1.2rem" }}>
+                <div className={highlightedFields.includes("blueTotalGold") ? "highlight-pulse" : ""} style={{ marginBottom: "1.2rem", padding: highlightedFields.includes("blueTotalGold") ? "0.5rem" : "0", transition: "all 0.3s ease" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.9rem" }}>
                     <span>총 획득 골드 (Gold)</span>
                     <strong className="text-blue">{features.blueTotalGold.toLocaleString()}G</strong>
@@ -272,7 +453,7 @@ export default function Home() {
                 </div>
 
                 {/* Blue CS Slider */}
-                <div style={{ marginBottom: "1.2rem" }}>
+                <div className={highlightedFields.includes("blueTotalMinionsKilled") ? "highlight-pulse" : ""} style={{ marginBottom: "1.2rem", padding: highlightedFields.includes("blueTotalMinionsKilled") ? "0.5rem" : "0", transition: "all 0.3s ease" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.9rem" }}>
                     <span>미니언 처치수 (CS)</span>
                     <strong className="text-blue">{features.blueTotalMinionsKilled}</strong>
@@ -285,7 +466,7 @@ export default function Home() {
                 </div>
 
                 {/* Blue Objective Counters */}
-                <div style={{ display: "flex", gap: "1rem", marginTop: "1rem" }} className="grid-cols-3">
+                <div className={`grid-cols-3 ${["blueDragons", "blueHeralds", "blueTowersDestroyed"].some(f => highlightedFields.includes(f)) ? "highlight-pulse" : ""}`} style={{ display: "flex", gap: "1rem", marginTop: "1rem", padding: ["blueDragons", "blueHeralds", "blueTowersDestroyed"].some(f => highlightedFields.includes(f)) ? "0.5rem" : "0", transition: "all 0.3s ease" }}>
                   <div style={{ background: "rgba(255,255,255,0.02)", padding: "0.5rem", borderRadius: "4px", textAlign: "center" }}>
                     <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase" }}>드래곤</div>
                     <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "0.5rem", marginTop: "0.25rem" }}>
@@ -315,7 +496,7 @@ export default function Home() {
                 </div>
 
                 {/* Blue Utility features */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", marginTop: "1rem" }}>
+                <div className={["blueWardsPlaced", "blueTotalExperience"].some(f => highlightedFields.includes(f)) ? "highlight-pulse" : ""} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", marginTop: "1rem", padding: ["blueWardsPlaced", "blueTotalExperience"].some(f => highlightedFields.includes(f)) ? "0.5rem" : "0", transition: "all 0.3s ease" }}>
                   <div>
                     <label style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>와드 설치</label>
                     <input type="number" className="range-slider blue-slider" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid var(--border-glass)", color: "white", padding: "0.25rem 0.5rem", borderRadius: "4px", width: "100%" }} value={features.blueWardsPlaced} onChange={(e) => handleFeatureChange("blueWardsPlaced", parseInt(e.target.value) || 0)} />
@@ -336,7 +517,7 @@ export default function Home() {
                 </h3>
 
                 {/* Red Kills Slider */}
-                <div style={{ marginBottom: "1.2rem" }}>
+                <div className={highlightedFields.includes("redKills") ? "highlight-pulse" : ""} style={{ marginBottom: "1.2rem", padding: highlightedFields.includes("redKills") ? "0.5rem" : "0", transition: "all 0.3s ease" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.9rem" }}>
                     <span>총 킬수 (Kills)</span>
                     <strong className="text-red">{features.redKills}</strong>
@@ -349,7 +530,7 @@ export default function Home() {
                 </div>
 
                 {/* Red Total Gold Slider */}
-                <div style={{ marginBottom: "1.2rem" }}>
+                <div className={highlightedFields.includes("redTotalGold") ? "highlight-pulse" : ""} style={{ marginBottom: "1.2rem", padding: highlightedFields.includes("redTotalGold") ? "0.5rem" : "0", transition: "all 0.3s ease" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.9rem" }}>
                     <span>총 획득 골드 (Gold)</span>
                     <strong className="text-red">{features.redTotalGold.toLocaleString()}G</strong>
@@ -362,7 +543,7 @@ export default function Home() {
                 </div>
 
                 {/* Red CS Slider */}
-                <div style={{ marginBottom: "1.2rem" }}>
+                <div className={highlightedFields.includes("redTotalMinionsKilled") ? "highlight-pulse" : ""} style={{ marginBottom: "1.2rem", padding: highlightedFields.includes("redTotalMinionsKilled") ? "0.5rem" : "0", transition: "all 0.3s ease" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.9rem" }}>
                     <span>미니언 처치수 (CS)</span>
                     <strong className="text-red">{features.redTotalMinionsKilled}</strong>
@@ -375,7 +556,7 @@ export default function Home() {
                 </div>
 
                 {/* Red Objective Counters */}
-                <div style={{ display: "flex", gap: "1rem", marginTop: "1rem" }} className="grid-cols-3">
+                <div className={`grid-cols-3 ${["redDragons", "redHeralds", "redTowersDestroyed"].some(f => highlightedFields.includes(f)) ? "highlight-pulse" : ""}`} style={{ display: "flex", gap: "1rem", marginTop: "1rem", padding: ["redDragons", "redHeralds", "redTowersDestroyed"].some(f => highlightedFields.includes(f)) ? "0.5rem" : "0", transition: "all 0.3s ease" }}>
                   <div style={{ background: "rgba(255,255,255,0.02)", padding: "0.5rem", borderRadius: "4px", textAlign: "center" }}>
                     <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", textTransform: "uppercase" }}>드래곤</div>
                     <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "0.5rem", marginTop: "0.25rem" }}>
@@ -405,7 +586,7 @@ export default function Home() {
                 </div>
 
                 {/* Red Utility features */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", marginTop: "1rem" }}>
+                <div className={["redWardsPlaced", "redTotalExperience"].some(f => highlightedFields.includes(f)) ? "highlight-pulse" : ""} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", marginTop: "1rem", padding: ["redWardsPlaced", "redTotalExperience"].some(f => highlightedFields.includes(f)) ? "0.5rem" : "0", transition: "all 0.3s ease" }}>
                   <div>
                     <label style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>와드 설치</label>
                     <input type="number" className="range-slider red-slider" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid var(--border-glass)", color: "white", padding: "0.25rem 0.5rem", borderRadius: "4px", width: "100%" }} value={features.redWardsPlaced} onChange={(e) => handleFeatureChange("redWardsPlaced", parseInt(e.target.value) || 0)} />
@@ -421,7 +602,7 @@ export default function Home() {
             </div>
 
             {/* FIRST BLOOD EXCLUSIVE TOGGLE */}
-            <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "2rem", marginTop: "2rem", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "1.5rem" }}>
+            <div className={highlightedFields.includes("blueFirstBlood") ? "highlight-pulse" : ""} style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "2rem", marginTop: "2rem", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: "1.5rem", padding: highlightedFields.includes("blueFirstBlood") ? "0.5rem" : "0", transition: "all 0.3s ease" }}>
               <span style={{ fontSize: "0.95rem" }}>퍼스트 블러드 진영:</span>
               <div style={{ display: "flex", gap: "1rem" }}>
                 <button 

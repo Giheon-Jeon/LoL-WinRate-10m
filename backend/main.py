@@ -194,3 +194,165 @@ def train_models():
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to train models: {str(e)}")
+
+import io
+from fastapi import UploadFile, File
+from PIL import Image
+import google.generativeai as genai
+
+# Try to configure Gemini from environment variable
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+if GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
+
+@app.post("/api/parse-scoreboard")
+async def parse_scoreboard(file: UploadFile = File(...)):
+    # Read image data
+    try:
+        contents = await file.read()
+        image = Image.open(io.BytesIO(contents))
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid image file: {str(e)}")
+        
+    # Check if Gemini API is configured
+    if not os.getenv("GEMINI_API_KEY"):
+        # FALLBACK MOCK DATA: Matching the user's provided 9 vs 0 scoreboard image perfectly
+        return {
+            "is_mocked": True,
+            "message": "GEMINI_API_KEY가 설정되지 않아 데모 모드로 작동 중입니다. .env 파일에 GEMINI_API_KEY를 설정하여 실제 이미지를 구동하세요.",
+            "blueKills": 9,
+            "blueDeaths": 4,
+            "blueAssists": 6,
+            "blueTotalMinionsKilled": 106,
+            "blueAvgLevel": 5.6,
+            "blueTotalGold": 16800,
+            "blueTotalExperience": 18200,
+            "blueWardsPlaced": 15,
+            "blueWardsDestroyed": 2,
+            "blueDragons": 1,
+            "blueHeralds": 0,
+            "blueTowersDestroyed": 0,
+            "blueTotalJungleMinionsKilled": 50,
+            "blueFirstBlood": 1,
+            
+            "redKills": 0,
+            "redDeaths": 9,
+            "redAssists": 1,
+            "redTotalMinionsKilled": 89,
+            "redAvgLevel": 5.6,
+            "redTotalGold": 15400,
+            "redTotalExperience": 17200,
+            "redWardsPlaced": 14,
+            "redWardsDestroyed": 3,
+            "redDragons": 0,
+            "redHeralds": 1,
+            "redTowersDestroyed": 0,
+            "redTotalJungleMinionsKilled": 48,
+            "redFirstBlood": 0
+        }
+        
+    try:
+        # Define detailed instructions for Gemini
+        prompt = """
+        You are an expert League of Legends analytics bot.
+        Analyze this screenshot of the in-game Tab scoreboard (normally taken at around 10 minutes).
+        
+        Extract the following statistics for both the Blue Team (usually on the left side) and Red Team (usually on the right side).
+        If some stats are not visible directly (e.g. wards placed, total gold, total experience, etc.), you must estimate them logically for a 10-minute game based on the visible metrics:
+        - CS (Minions killed): 1 CS is worth approximately 20 gold.
+        - Kills: 1 Kill is worth 300 gold, and assists are worth gold too.
+        - Level: Higher levels mean more experience. Calculate team average level. Total Experience at 10m is around 15000-19000 depending on levels (e.g. level 6 is around 3200-3600 XP per player, so 5 players at level 5-6 is around 16000-18000 XP).
+        - Total Gold: base gold at 10 minutes is around 9500 per team, plus gold from CS (CS * 20), kills (Kills * 300), assists (Assists * 100), and turret plates.
+        - Wards Placed: estimate between 10-25 per team at 10m.
+        - Wards Destroyed: estimate between 1-8 per team at 10m.
+        - First Blood: determine which team got first blood (1 for Blue if Blue got it, otherwise 0. Or 0 for both if unsure).
+        - Elite Monsters: Dragons (0 to 2) and Heralds (0 to 1).
+        - Towers Destroyed: estimate between 0 and 2.
+        
+        You MUST return a JSON object with the following schema:
+        {
+          "blueKills": integer,
+          "blueDeaths": integer,
+          "blueAssists": integer,
+          "blueTotalMinionsKilled": integer,
+          "blueAvgLevel": float,
+          "blueTotalGold": integer,
+          "blueTotalExperience": integer,
+          "blueWardsPlaced": integer,
+          "blueWardsDestroyed": integer,
+          "blueDragons": integer,
+          "blueHeralds": integer,
+          "blueTowersDestroyed": integer,
+          "blueTotalJungleMinionsKilled": integer,
+          "blueFirstBlood": integer,
+          
+          "redKills": integer,
+          "redDeaths": integer,
+          "redAssists": integer,
+          "redTotalMinionsKilled": integer,
+          "redAvgLevel": float,
+          "redTotalGold": integer,
+          "redTotalExperience": integer,
+          "redWardsPlaced": integer,
+          "redWardsDestroyed": integer,
+          "redDragons": integer,
+          "redHeralds": integer,
+          "redTowersDestroyed": integer,
+          "redTotalJungleMinionsKilled": integer,
+          "redFirstBlood": integer
+        }
+        
+        Strictly output ONLY valid JSON without any markdown formatting wrappers (like ```json ... ```).
+        """
+        
+        # Instantiate Gemini Generative Model
+        model = genai.GenerativeModel("gemini-2.5-flash")
+        
+        # Call model with image and prompt
+        response = model.generate_content(
+            contents=[image, prompt],
+            generation_config={"response_mime_type": "application/json"}
+        )
+        
+        # Parse output
+        parsed_data = json.loads(response.text.strip())
+        parsed_data["is_mocked"] = False
+        return parsed_data
+        
+    except Exception as e:
+        # Fallback to demo mode if API call fails
+        return {
+            "is_mocked": True,
+            "error_detail": str(e),
+            "message": f"Gemini API 호출에 실패하여 데모 데이터를 반환합니다: {str(e)}",
+            "blueKills": 9,
+            "blueDeaths": 4,
+            "blueAssists": 6,
+            "blueTotalMinionsKilled": 106,
+            "blueAvgLevel": 5.6,
+            "blueTotalGold": 16800,
+            "blueTotalExperience": 18200,
+            "blueWardsPlaced": 15,
+            "blueWardsDestroyed": 2,
+            "blueDragons": 1,
+            "blueHeralds": 0,
+            "blueTowersDestroyed": 0,
+            "blueTotalJungleMinionsKilled": 50,
+            "blueFirstBlood": 1,
+            
+            "redKills": 0,
+            "redDeaths": 9,
+            "redAssists": 1,
+            "redTotalMinionsKilled": 89,
+            "redAvgLevel": 5.6,
+            "redTotalGold": 15400,
+            "redTotalExperience": 17200,
+            "redWardsPlaced": 14,
+            "redWardsDestroyed": 3,
+            "redDragons": 0,
+            "redHeralds": 1,
+            "redTowersDestroyed": 0,
+            "redTotalJungleMinionsKilled": 48,
+            "redFirstBlood": 0
+        }
+
