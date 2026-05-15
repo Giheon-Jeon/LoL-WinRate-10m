@@ -20,11 +20,9 @@ def train_and_evaluate():
     print("Starting ML Model training process...")
     
     # 1. 데이터 로드
-    data_path = os.path.join(os.path.dirname(__file__), "..", "public", "high_diamond_ranked_10min.csv")
+    data_path = os.path.join(os.path.dirname(__file__), "high_diamond_ranked_10min.csv")
     if not os.path.exists(data_path):
-        data_path = os.path.join(os.path.dirname(__file__), "..", "high_diamond_ranked_10min.csv.bak")
-        if not os.path.exists(data_path):
-            raise FileNotFoundError(f"Dataset not found at: {data_path}")
+        raise FileNotFoundError(f"Dataset not found at: {data_path}")
             
     df = pd.read_csv(data_path)
     
