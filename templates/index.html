@@ -224,6 +224,66 @@
             .scanner-card { grid-column: 1; }
             .logo-text { font-size: 2.5rem; }
         }
+        /* Metrics Table */
+        .metrics-card {
+            grid-column: span 2;
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-top: 2rem;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+
+        th {
+            text-align: left;
+            color: var(--gold-main);
+            border-bottom: 1px solid var(--border-glass);
+            padding: 1rem;
+            font-weight: 700;
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            color: var(--text-secondary);
+        }
+
+        tr:hover td { color: var(--gold-bright); background: rgba(200, 170, 110, 0.03); }
+
+        .metric-badge {
+            background: rgba(200, 170, 110, 0.1);
+            color: var(--gold-main);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-weight: 600;
+        }
+
+        select {
+            background: var(--bg-deep);
+            color: var(--gold-main);
+            border: 1px solid var(--gold-dark);
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            outline: none;
+            cursor: pointer;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+        }
+
+        @media (max-width: 850px) {
+            .main-grid { grid-template-columns: 1fr; }
+            .scanner-card, .metrics-card { grid-column: 1; }
+            .logo-text { font-size: 2.5rem; }
+        }
     </style>
 </head>
 <body>
@@ -240,6 +300,14 @@
     </header>
 
     <div class="prediction-hero" id="hero">
+        <div style="position: absolute; top: 1.5rem; right: 1.5rem;">
+            <select id="modelSelect" onchange="predict()">
+                <option value="XGBoost">XGBoost Engine</option>
+                <option value="Random Forest">Random Forest</option>
+                <option value="Logistic Regression">Logistic Regression</option>
+            </select>
+        </div>
+        
         <div class="verdict-title">승률 예측 (Estimated Winrate)</div>
         <div class="verdict-value blue" id="verdict">블루팀 우세</div>
         
@@ -332,6 +400,26 @@
             <p style="color: var(--text-secondary); font-size: 0.9rem;">이미지를 클릭하거나 드래그하여 업로드하세요 (Tab 스크린샷)</p>
             <input type="file" id="fileInput" hidden accept="image/*" onchange="handleUpload(this.files[0])">
         </div>
+
+        <!-- Metrics Dashboard -->
+        <div class="metrics-card">
+            <h3 style="color: var(--gold-bright); margin-bottom: 1rem; font-size: 1.1rem;">🤖 AI 모델 성능 대시보드</h3>
+            <table id="metricsTable">
+                <thead>
+                    <tr>
+                        <th>Model Name</th>
+                        <th>Accuracy</th>
+                        <th>Precision</th>
+                        <th>Recall</th>
+                        <th>F1-Score</th>
+                        <th>ROC-AUC</th>
+                    </tr>
+                </thead>
+                <tbody id="metricsBody">
+                    <!-- Loaded via JS -->
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <div style="text-align: center; margin-top: 3rem;">
@@ -349,11 +437,15 @@
 
     const updateVal = (id, val) => {
         const displayVal = id.includes('Gold') ? Number(val).toLocaleString() + 'G' : val;
-        document.getElementById(`val-${id}`).innerText = displayVal;
+        const el = document.getElementById(`val-${id}`);
+        if (el) el.innerText = displayVal;
+        
+        // Direct value update (Fixes the accumulation bug)
         features[id] = parseFloat(val);
         
-        // Auto-balance logic
-        if (id === 'blueKills') features.blueTotalGold += 300; // Simplified
+        // Deaths should be the inverse of kills for better prediction accuracy in simple UI
+        if (id === 'blueKills') features.redDeaths = parseFloat(val);
+        if (id === 'redKills') features.blueDeaths = parseFloat(val);
         
         debouncedPredict();
     };
@@ -365,8 +457,9 @@
     };
 
     async function predict() {
+        const modelName = document.getElementById('modelSelect').value;
         try {
-            const res = await fetch('/api/predict?model_name=XGBoost', {
+            const res = await fetch(`/api/predict?model_name=${modelName}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(features)
@@ -384,8 +477,34 @@
             document.getElementById('red-pct').innerText = rPct;
             document.getElementById('bar-blue').style.width = bPct;
             document.getElementById('bar-red').style.width = rPct;
+            document.getElementById('model-info').innerText = `${modelName} 모델 분석 결과`;
         } catch (e) {
             console.error(e);
+        }
+    }
+
+    async function loadMetrics() {
+        try {
+            const res = await fetch('/api/metrics');
+            const data = await res.json();
+            const body = document.getElementById('metricsBody');
+            body.innerHTML = '';
+            
+            for (let model in data) {
+                const m = data[model];
+                body.innerHTML += `
+                    <tr>
+                        <td style="color: var(--gold-main); font-weight: 600;">${model}</td>
+                        <td><span class="metric-badge">${(m.Accuracy * 100).toFixed(2)}%</span></td>
+                        <td>${(m.Precision * 100).toFixed(2)}%</td>
+                        <td>${(m.Recall * 100).toFixed(2)}%</td>
+                        <td>${(m["F1-Score"] * 100).toFixed(2)}%</td>
+                        <td>${(m["ROC-AUC"] * 100).toFixed(2)}%</td>
+                    </tr>
+                `;
+            }
+        } catch (e) {
+            console.error('Failed to load metrics');
         }
     }
 
@@ -402,14 +521,11 @@
             
             // Update features
             for (let key in data) {
-                if (features.hasOwnProperty(key)) {
-                    features[key] = data[key];
-                    const input = document.getElementById(key);
-                    if (input) {
-                        input.value = data[key];
-                        updateVal(key, data[key]);
-                    }
-                }
+                features[key] = data[key];
+                const input = document.getElementById(key);
+                const display = document.getElementById(`val-${key}`);
+                if (input) input.value = data[key];
+                if (display) display.innerText = key.includes('Gold') ? Number(data[key]).toLocaleString() + 'G' : data[key];
             }
             predict();
         } catch (e) {
@@ -419,7 +535,8 @@
         }
     }
 
-    // Initial prediction
+    // Initial setup
+    loadMetrics();
     predict();
 </script>
 
