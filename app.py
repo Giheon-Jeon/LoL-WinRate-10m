@@ -8,7 +8,7 @@ from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 from PIL import Image
 import google.generativeai as genai
-from train import train_and_evaluate
+from train import train_and_evaluate, MoEModel
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 CORS(app)
