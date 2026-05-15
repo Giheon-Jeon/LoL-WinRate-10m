@@ -28,11 +28,7 @@ def index():
 def get_metrics():
     metrics_path = os.path.join(MODELS_DIR, "metrics.json")
     if not os.path.exists(metrics_path):
-        try:
-            metrics = train_and_evaluate()
-            return jsonify(metrics)
-        except Exception as e:
-            return jsonify({"error": f"Failed to auto-train: {str(e)}"}), 500
+        return jsonify({"error": "Metrics file not found. Please run training locally first."}), 404
             
     with open(metrics_path, "r", encoding="utf-8") as f:
         metrics = json.load(f)
@@ -41,24 +37,14 @@ def get_metrics():
 @app.route("/api/predict", methods=["POST"])
 def predict_match():
     input_data = request.json
-    model_name = request.args.get("model_name", "XGBoost")
+    model_name = request.args.get("model_name", "MoE Ensemble")
     
     model_key = model_name.lower().replace(" ", "_")
     model_file = os.path.join(MODELS_DIR, f"{model_key}.joblib")
     scaler_file = os.path.join(MODELS_DIR, "scaler.joblib")
     
-    # Fallback to Logistic Regression if XGBoost not present
-    if not os.path.exists(model_file):
-        if model_key == "xgboost":
-            model_key = "logistic_regression"
-            model_file = os.path.join(MODELS_DIR, "logistic_regression.joblib")
-            model_name = "Logistic Regression"
-            
     if not os.path.exists(model_file) or not os.path.exists(scaler_file):
-        try:
-            train_and_evaluate()
-        except Exception as e:
-            return jsonify({"error": f"Failed to auto-train: {str(e)}"}), 500
+        return jsonify({"error": f"Model or scaler not found: {model_name}. Ensure models are uploaded."}), 500
             
     try:
         model = joblib.load(model_file)
