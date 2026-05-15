@@ -116,8 +116,7 @@
             background: var(--bg-card);
             border: 1px solid rgba(255,255,255,0.05);
             border-radius: 20px;
-            padding: 2rem;
-            transition: transform 0.3s ease;
+            padding: 1.5rem;
         }
 
         .team-card.blue { border-left: 4px solid var(--blue-team); }
@@ -127,27 +126,40 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 2rem;
+            margin-bottom: 1.5rem;
         }
 
-        .team-title { font-size: 1.5rem; font-weight: 700; }
-        .team-title.blue { color: var(--blue-team); }
-        .team-title.red { color: var(--red-team); }
+        .stat-section {
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background: rgba(255,255,255,0.02);
+            border-radius: 12px;
+        }
 
-        .stat-group { margin-bottom: 1.5rem; }
+        .section-title {
+            font-size: 0.75rem;
+            color: var(--gold-main);
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            border-bottom: 1px solid rgba(200, 170, 110, 0.1);
+            padding-bottom: 0.3rem;
+        }
+
+        .stat-group { margin-bottom: 1rem; }
         .stat-label {
             display: flex;
             justify-content: space-between;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             color: var(--text-secondary);
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.3rem;
         }
-        .stat-value { font-weight: 600; color: var(--text-primary); }
+        .stat-value { font-weight: 600; color: var(--text-primary); font-size: 0.85rem; }
 
         input[type="range"] {
             -webkit-appearance: none;
             width: 100%;
-            height: 4px;
+            height: 3px;
             background: rgba(255,255,255,0.1);
             border-radius: 2px;
             outline: none;
@@ -155,134 +167,54 @@
 
         input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
-            width: 16px;
-            height: 16px;
+            width: 12px;
+            height: 12px;
             border-radius: 50%;
             background: var(--gold-main);
             cursor: pointer;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
-            transition: transform 0.2s;
         }
 
-        input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.2); }
-
-        /* Scanner */
-        .scanner-card {
-            grid-column: span 2;
-            background: linear-gradient(135deg, rgba(200, 170, 110, 0.05), rgba(15, 18, 26, 0.8));
-            border: 1px dashed var(--gold-dark);
-            border-radius: 20px;
-            padding: 2.5rem;
+        /* First Blood Toggle */
+        .fb-container {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        .fb-btn {
+            flex: 1;
+            padding: 0.5rem;
+            border: 1px solid var(--gold-dark);
+            border-radius: 6px;
+            font-size: 0.75rem;
+            cursor: pointer;
             text-align: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-top: 2rem;
+            transition: all 0.2s;
+            color: var(--text-secondary);
+        }
+        .fb-btn.active {
+            background: var(--gold-main);
+            color: var(--bg-deep);
+            font-weight: 800;
         }
 
-        .scanner-card:hover { background: rgba(200, 170, 110, 0.08); border-color: var(--gold-main); }
-
-        .btn-primary {
-            background: linear-gradient(135deg, var(--gold-main), var(--gold-dark));
-            color: white;
-            border: none;
-            padding: 1rem 2rem;
-            border-radius: 12px;
-            font-weight: 700;
-            text-transform: uppercase;
-            cursor: pointer;
-            transition: all 0.3s;
-            margin-top: 2rem;
-        }
-
-        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(200, 170, 110, 0.3); }
-
-        .loading-overlay {
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(5, 7, 10, 0.8);
-            backdrop-filter: blur(8px);
-            display: none;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-
-        .spinner {
-            width: 50px;
-            height: 50px;
-            border: 4px solid var(--gold-dark);
-            border-top: 4px solid var(--gold-bright);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-        @media (max-width: 850px) {
-            .main-grid { grid-template-columns: 1fr; }
-            .scanner-card { grid-column: 1; }
-            .logo-text { font-size: 2.5rem; }
-        }
         /* Metrics Table */
         .metrics-card {
             grid-column: span 2;
             background: var(--bg-card);
             border: 1px solid var(--border-glass);
             border-radius: 20px;
-            padding: 2rem;
+            padding: 1.5rem;
             margin-top: 2rem;
             overflow-x: auto;
         }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 1rem;
-            font-size: 0.9rem;
-        }
+        table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+        th { text-align: left; color: var(--gold-main); padding: 0.8rem; border-bottom: 1px solid var(--border-glass); }
+        td { padding: 0.8rem; border-bottom: 1px solid rgba(255,255,255,0.05); }
 
-        th {
-            text-align: left;
-            color: var(--gold-main);
-            border-bottom: 1px solid var(--border-glass);
-            padding: 1rem;
-            font-weight: 700;
-        }
-
-        td {
-            padding: 1rem;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-            color: var(--text-secondary);
-        }
-
-        tr:hover td { color: var(--gold-bright); background: rgba(200, 170, 110, 0.03); }
-
-        .metric-badge {
-            background: rgba(200, 170, 110, 0.1);
-            color: var(--gold-main);
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-family: monospace;
-            font-weight: 600;
-        }
-
-        select {
-            background: var(--bg-deep);
-            color: var(--gold-main);
-            border: 1px solid var(--gold-dark);
-            padding: 0.5rem 1rem;
-            border-radius: 8px;
-            outline: none;
-            cursor: pointer;
-            font-family: 'Outfit', sans-serif;
-            font-weight: 600;
-        }
-
-        @media (max-width: 850px) {
+        @media (max-width: 950px) {
             .main-grid { grid-template-columns: 1fr; }
             .scanner-card, .metrics-card { grid-column: 1; }
-            .logo-text { font-size: 2.5rem; }
         }
     </style>
 </head>
@@ -296,165 +228,233 @@
 <div class="container">
     <header>
         <div class="logo-text">HEXTECH AI</div>
-        <div class="subtitle">LEAGUE OF LEGENDS 10M PREDICTOR</div>
+        <div class="subtitle">리그 오브 레전드 10분 지표 정밀 분석</div>
     </header>
 
     <div class="prediction-hero" id="hero">
-        <div style="position: absolute; top: 1.5rem; right: 1.5rem;">
+        <div style="position: absolute; top: 1rem; right: 1rem;">
             <select id="modelSelect" onchange="predict()">
-                <option value="XGBoost">XGBoost Engine</option>
-                <option value="Random Forest">Random Forest</option>
-                <option value="Logistic Regression">Logistic Regression</option>
+                <option value="XGBoost">XGBoost 엔진</option>
+                <option value="Random Forest">랜덤 포레스트</option>
+                <option value="Logistic Regression">로지스틱 회귀</option>
             </select>
         </div>
         
-        <div class="verdict-title">승률 예측 (Estimated Winrate)</div>
+        <div class="verdict-title">승률 예측 (전체 지표 분석)</div>
         <div class="verdict-value blue" id="verdict">블루팀 우세</div>
         
-        <div style="display: flex; justify-content: space-between; font-weight: 600; font-size: 1.1rem;">
-            <span style="color: var(--blue-team)">BLUE <span id="blue-pct">50.0%</span></span>
-            <span style="color: var(--red-team)">RED <span id="red-pct">50.0%</span></span>
+        <div style="display: flex; justify-content: space-between; font-weight: 600;">
+            <span style="color: var(--blue-team)">블루팀 <span id="blue-pct">50.0%</span></span>
+            <span style="color: var(--red-team)">레드팀 <span id="red-pct">50.0%</span></span>
         </div>
         
         <div class="winrate-bar-container">
             <div class="winrate-blue" id="bar-blue" style="width: 50%"></div>
             <div class="winrate-red" id="bar-red" style="width: 50%"></div>
         </div>
-        
-        <p style="color: var(--text-secondary); font-size: 0.9rem;" id="model-info">XGBoost 모델 분석 결과</p>
+        <p style="color: var(--text-secondary); font-size: 0.8rem;" id="model-info">AI 모델 실시간 분석 가동 중</p>
+    </div>
+
+    <div class="fb-container">
+        <div class="fb-btn active" id="fb-blue" onclick="setFB('blue')">블루팀 퍼스트 블러드</div>
+        <div class="fb-btn" id="fb-red" onclick="setFB('red')">레드팀 퍼스트 블러드</div>
     </div>
 
     <div class="main-grid">
-        <!-- Blue Team Card -->
+        <!-- Blue Team -->
         <div class="team-card blue">
-            <div class="team-header">
-                <div class="team-title blue">BLUE TEAM</div>
-                <div class="stat-value" style="color: var(--blue-team)">10:00</div>
-            </div>
-
-            <div class="stat-group">
-                <div class="stat-label"><span>총 킬 (Kills)</span><span class="stat-value" id="val-blueKills">6</span></div>
-                <input type="range" id="blueKills" min="0" max="25" value="6" oninput="updateVal('blueKills', this.value)">
-            </div>
-
-            <div class="stat-group">
-                <div class="stat-label"><span>획득 골드 (Gold)</span><span class="stat-value" id="val-blueTotalGold">16,500G</span></div>
-                <input type="range" id="blueTotalGold" min="10000" max="25000" step="100" value="16500" oninput="updateVal('blueTotalGold', this.value)">
-            </div>
-
-            <div class="stat-group">
-                <div class="stat-label"><span>미니언 (CS)</span><span class="stat-value" id="val-blueTotalMinionsKilled">210</span></div>
-                <input type="range" id="blueTotalMinionsKilled" min="100" max="300" value="210" oninput="updateVal('blueTotalMinionsKilled', this.value)">
-            </div>
-
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="team-header"><div class="team-title blue">블루팀 (BLUE)</div></div>
+            
+            <div class="stat-section">
+                <div class="section-title">전투 및 레벨</div>
                 <div class="stat-group">
-                    <div class="stat-label"><span>드래곤</span><span class="stat-value" id="val-blueDragons">1</span></div>
-                    <input type="range" id="blueDragons" min="0" max="2" value="1" oninput="updateVal('blueDragons', this.value)">
+                    <div class="stat-label"><span>총 킬 (Kills)</span><span id="val-blueKills">0</span></div>
+                    <input type="range" id="blueKills" min="0" max="30" value="0" oninput="updateVal('blueKills', this.value)">
                 </div>
                 <div class="stat-group">
-                    <div class="stat-label"><span>평균 레벨</span><span class="stat-value" id="val-blueAvgLevel">6.5</span></div>
-                    <input type="range" id="blueAvgLevel" min="1" max="10" step="0.1" value="6.5" oninput="updateVal('blueAvgLevel', this.value)">
+                    <div class="stat-label"><span>어시스트 (Assists)</span><span id="val-blueAssists">0</span></div>
+                    <input type="range" id="blueAssists" min="0" max="50" value="0" oninput="updateVal('blueAssists', this.value)">
+                </div>
+                <div class="stat-group">
+                    <div class="stat-label"><span>평균 레벨</span><span id="val-blueAvgLevel">1.0</span></div>
+                    <input type="range" id="blueAvgLevel" min="1" max="18" step="0.1" value="1" oninput="updateVal('blueAvgLevel', this.value)">
+                </div>
+            </div>
+
+            <div class="stat-section">
+                <div class="section-title">경제 지표</div>
+                <div class="stat-group">
+                    <div class="stat-label"><span>총 획득 골드</span><span id="val-blueTotalGold">10,000</span></div>
+                    <input type="range" id="blueTotalGold" min="5000" max="30000" step="100" value="10000" oninput="updateVal('blueTotalGold', this.value)">
+                </div>
+                <div class="stat-group">
+                    <div class="stat-label"><span>총 획득 경험치</span><span id="val-blueTotalExperience">10,000</span></div>
+                    <input type="range" id="blueTotalExperience" min="5000" max="35000" step="100" value="10000" oninput="updateVal('blueTotalExperience', this.value)">
+                </div>
+                <div class="stat-group">
+                    <div class="stat-label"><span>미니언 처치 (CS)</span><span id="val-blueTotalMinionsKilled">0</span></div>
+                    <input type="range" id="blueTotalMinionsKilled" min="0" max="400" value="0" oninput="updateVal('blueTotalMinionsKilled', this.value)">
+                </div>
+                <div class="stat-group">
+                    <div class="stat-label"><span>정글 미니언 처치</span><span id="val-blueTotalJungleMinionsKilled">0</span></div>
+                    <input type="range" id="blueTotalJungleMinionsKilled" min="0" max="100" value="0" oninput="updateVal('blueTotalJungleMinionsKilled', this.value)">
+                </div>
+            </div>
+
+            <div class="stat-section">
+                <div class="section-title">오브젝트 및 시야</div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                    <div class="stat-group">
+                        <div class="stat-label"><span>드래곤</span><span id="val-blueDragons">0</span></div>
+                        <input type="range" id="blueDragons" min="0" max="2" value="0" oninput="updateVal('blueDragons', this.value)">
+                    </div>
+                    <div class="stat-group">
+                        <div class="stat-label"><span>전령</span><span id="val-blueHeralds">0</span></div>
+                        <input type="range" id="blueHeralds" min="0" max="1" value="0" oninput="updateVal('blueHeralds', this.value)">
+                    </div>
+                    <div class="stat-group">
+                        <div class="stat-label"><span>포탑 파괴</span><span id="val-blueTowersDestroyed">0</span></div>
+                        <input type="range" id="blueTowersDestroyed" min="0" max="5" value="0" oninput="updateVal('blueTowersDestroyed', this.value)">
+                    </div>
+                    <div class="stat-group">
+                        <div class="stat-label"><span>엘리트 몹</span><span id="val-blueEliteMonsters">0</span></div>
+                        <input type="range" id="blueEliteMonsters" min="0" max="3" value="0" oninput="updateVal('blueEliteMonsters', this.value)">
+                    </div>
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.5rem;">
+                    <div class="stat-group">
+                        <div class="stat-label"><span>와드 설치</span><span id="val-blueWardsPlaced">0</span></div>
+                        <input type="range" id="blueWardsPlaced" min="0" max="50" value="0" oninput="updateVal('blueWardsPlaced', this.value)">
+                    </div>
+                    <div class="stat-group">
+                        <div class="stat-label"><span>와드 제거</span><span id="val-blueWardsDestroyed">0</span></div>
+                        <input type="range" id="blueWardsDestroyed" min="0" max="20" value="0" oninput="updateVal('blueWardsDestroyed', this.value)">
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Red Team Card -->
+        <!-- Red Team -->
         <div class="team-card red">
-            <div class="team-header">
-                <div class="team-title red">RED TEAM</div>
-                <div class="stat-value" style="color: var(--red-team)">10:00</div>
-            </div>
-
-            <div class="stat-group">
-                <div class="stat-label"><span>총 킬 (Kills)</span><span class="stat-value" id="val-redKills">4</span></div>
-                <input type="range" id="redKills" min="0" max="25" value="4" oninput="updateVal('redKills', this.value)">
-            </div>
-
-            <div class="stat-group">
-                <div class="stat-label"><span>획득 골드 (Gold)</span><span class="stat-value" id="val-redTotalGold">15,800G</span></div>
-                <input type="range" id="redTotalGold" min="10000" max="25000" step="100" value="15800" oninput="updateVal('redTotalGold', this.value)">
-            </div>
-
-            <div class="stat-group">
-                <div class="stat-label"><span>미니언 (CS)</span><span class="stat-value" id="val-redTotalMinionsKilled">205</span></div>
-                <input type="range" id="redTotalMinionsKilled" min="100" max="300" value="205" oninput="updateVal('redTotalMinionsKilled', this.value)">
-            </div>
-
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div class="team-header"><div class="team-title red">레드팀 (RED)</div></div>
+            
+            <div class="stat-section">
+                <div class="section-title">전투 및 레벨</div>
                 <div class="stat-group">
-                    <div class="stat-label"><span>드래곤</span><span class="stat-value" id="val-redDragons">0</span></div>
-                    <input type="range" id="redDragons" min="0" max="2" value="0" oninput="updateVal('redDragons', this.value)">
+                    <div class="stat-label"><span>총 킬 (Kills)</span><span id="val-redKills">0</span></div>
+                    <input type="range" id="redKills" min="0" max="30" value="0" oninput="updateVal('redKills', this.value)">
                 </div>
                 <div class="stat-group">
-                    <div class="stat-label"><span>평균 레벨</span><span class="stat-value" id="val-redAvgLevel">6.4</span></div>
-                    <input type="range" id="redAvgLevel" min="1" max="10" step="0.1" value="6.4" oninput="updateVal('redAvgLevel', this.value)">
+                    <div class="stat-label"><span>어시스트 (Assists)</span><span id="val-redAssists">0</span></div>
+                    <input type="range" id="redAssists" min="0" max="50" value="0" oninput="updateVal('redAssists', this.value)">
+                </div>
+                <div class="stat-group">
+                    <div class="stat-label"><span>평균 레벨</span><span id="val-redAvgLevel">1.0</span></div>
+                    <input type="range" id="redAvgLevel" min="1" max="18" step="0.1" value="1" oninput="updateVal('redAvgLevel', this.value)">
+                </div>
+            </div>
+
+            <div class="stat-section">
+                <div class="section-title">경제 지표</div>
+                <div class="stat-group">
+                    <div class="stat-label"><span>총 획득 골드</span><span id="val-redTotalGold">10,000</span></div>
+                    <input type="range" id="redTotalGold" min="5000" max="30000" step="100" value="10000" oninput="updateVal('redTotalGold', this.value)">
+                </div>
+                <div class="stat-group">
+                    <div class="stat-label"><span>총 획득 경험치</span><span id="val-redTotalExperience">10,000</span></div>
+                    <input type="range" id="redTotalExperience" min="5000" max="35000" step="100" value="10000" oninput="updateVal('redTotalExperience', this.value)">
+                </div>
+                <div class="stat-group">
+                    <div class="stat-label"><span>미니언 처치 (CS)</span><span id="val-redTotalMinionsKilled">0</span></div>
+                    <input type="range" id="redTotalMinionsKilled" min="0" max="400" value="0" oninput="updateVal('redTotalMinionsKilled', this.value)">
+                </div>
+                <div class="stat-group">
+                    <div class="stat-label"><span>정글 미니언 처치</span><span id="val-redTotalJungleMinionsKilled">0</span></div>
+                    <input type="range" id="redTotalJungleMinionsKilled" min="0" max="100" value="0" oninput="updateVal('redTotalJungleMinionsKilled', this.value)">
+                </div>
+            </div>
+
+            <div class="stat-section">
+                <div class="section-title">오브젝트 및 시야</div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                    <div class="stat-group">
+                        <div class="stat-label"><span>드래곤</span><span id="val-redDragons">0</span></div>
+                        <input type="range" id="redDragons" min="0" max="2" value="0" oninput="updateVal('redDragons', this.value)">
+                    </div>
+                    <div class="stat-group">
+                        <div class="stat-label"><span>전령</span><span id="val-redHeralds">0</span></div>
+                        <input type="range" id="redHeralds" min="0" max="1" value="0" oninput="updateVal('redHeralds', this.value)">
+                    </div>
+                    <div class="stat-group">
+                        <div class="stat-label"><span>포탑 파괴</span><span id="val-redTowersDestroyed">0</span></div>
+                        <input type="range" id="redTowersDestroyed" min="0" max="5" value="0" oninput="updateVal('redTowersDestroyed', this.value)">
+                    </div>
+                    <div class="stat-group">
+                        <div class="stat-label"><span>엘리트 몹</span><span id="val-redEliteMonsters">0</span></div>
+                        <input type="range" id="redEliteMonsters" min="0" max="3" value="0" oninput="updateVal('redEliteMonsters', this.value)">
+                    </div>
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.5rem;">
+                    <div class="stat-group">
+                        <div class="stat-label"><span>와드 설치</span><span id="val-redWardsPlaced">0</span></div>
+                        <input type="range" id="redWardsPlaced" min="0" max="50" value="0" oninput="updateVal('redWardsPlaced', this.value)">
+                    </div>
+                    <div class="stat-group">
+                        <div class="stat-label"><span>와드 제거</span><span id="val-redWardsDestroyed">0</span></div>
+                        <input type="range" id="redWardsDestroyed" min="0" max="20" value="0" oninput="updateVal('redWardsDestroyed', this.value)">
+                    </div>
                 </div>
             </div>
         </div>
 
         <!-- Scanner Card -->
         <div class="scanner-card" id="dropzone" onclick="document.getElementById('fileInput').click()">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--gold-main)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-            <h3 style="margin-top: 1rem; color: var(--gold-bright);">스코어보드 스캔하기</h3>
-            <p style="color: var(--text-secondary); font-size: 0.9rem;">이미지를 클릭하거나 드래그하여 업로드하세요 (Tab 스크린샷)</p>
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--gold-main)" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            <h4 style="margin-top: 0.5rem; color: var(--gold-bright);">스코어보드 스캔하기</h4>
             <input type="file" id="fileInput" hidden accept="image/*" onchange="handleUpload(this.files[0])">
         </div>
 
-        <!-- Metrics Dashboard -->
         <div class="metrics-card">
-            <h3 style="color: var(--gold-bright); margin-bottom: 1rem; font-size: 1.1rem;">🤖 AI 모델 성능 대시보드</h3>
+            <h3 style="color: var(--gold-bright); margin-bottom: 1rem;">🤖 AI 모델별 성능 지표</h3>
             <table id="metricsTable">
-                <thead>
-                    <tr>
-                        <th>Model Name</th>
-                        <th>Accuracy</th>
-                        <th>Precision</th>
-                        <th>Recall</th>
-                        <th>F1-Score</th>
-                        <th>ROC-AUC</th>
-                    </tr>
-                </thead>
-                <tbody id="metricsBody">
-                    <!-- Loaded via JS -->
-                </tbody>
+                <thead><tr><th>모델명</th><th>정확도 (Acc)</th><th>F1-Score</th><th>ROC-AUC</th></tr></thead>
+                <tbody id="metricsBody"></tbody>
             </table>
         </div>
-    </div>
-
-    <div style="text-align: center; margin-top: 3rem;">
-        <p style="color: var(--text-secondary); font-size: 0.8rem;">© 2026 HEXTECH Predictive Engine. Data based on Diamond+ LoL Matches.</p>
     </div>
 </div>
 
 <script>
     let features = {
-        blueKills: 6, blueTotalGold: 16500, blueTotalMinionsKilled: 210, blueDragons: 1, blueAvgLevel: 6.5,
-        redKills: 4, redTotalGold: 15800, redTotalMinionsKilled: 205, redDragons: 0, redAvgLevel: 6.4,
-        blueFirstBlood: 1, blueWardsPlaced: 15, blueWardsDestroyed: 2, blueTotalExperience: 18000,
-        redWardsPlaced: 14, redWardsDestroyed: 3, redTotalExperience: 17500
+        blueWardsPlaced: 0, blueWardsDestroyed: 0, blueFirstBlood: 1, blueKills: 0, blueDeaths: 0, blueAssists: 0,
+        blueEliteMonsters: 0, blueDragons: 0, blueHeralds: 0, blueTowersDestroyed: 0, blueTotalGold: 10000, blueAvgLevel: 1,
+        blueTotalExperience: 10000, blueTotalMinionsKilled: 0, blueTotalJungleMinionsKilled: 0,
+        redWardsPlaced: 0, redWardsDestroyed: 0, redFirstBlood: 0, redKills: 0, redDeaths: 0, redAssists: 0,
+        redEliteMonsters: 0, redDragons: 0, redHeralds: 0, redTowersDestroyed: 0, redTotalGold: 10000, redAvgLevel: 1,
+        redTotalExperience: 10000, redTotalMinionsKilled: 0, redTotalJungleMinionsKilled: 0
     };
 
     const updateVal = (id, val) => {
-        const displayVal = id.includes('Gold') ? Number(val).toLocaleString() + 'G' : val;
-        const el = document.getElementById(`val-${id}`);
-        if (el) el.innerText = displayVal;
-        
-        // Direct value update (Fixes the accumulation bug)
+        document.getElementById(`val-${id}`).innerText = Number(val).toLocaleString();
         features[id] = parseFloat(val);
         
-        // Deaths should be the inverse of kills for better prediction accuracy in simple UI
-        if (id === 'blueKills') features.redDeaths = parseFloat(val);
-        if (id === 'redKills') features.blueDeaths = parseFloat(val);
+        // Logical Sync
+        if (id === 'blueKills') { features.redDeaths = parseFloat(val); }
+        if (id === 'redKills') { features.blueDeaths = parseFloat(val); }
         
         debouncedPredict();
     };
 
-    let timer;
-    const debouncedPredict = () => {
-        clearTimeout(timer);
-        timer = setTimeout(predict, 300);
+    const setFB = (team) => {
+        features.blueFirstBlood = (team === 'blue' ? 1 : 0);
+        features.redFirstBlood = (team === 'red' ? 1 : 0);
+        document.getElementById('fb-blue').className = `fb-btn ${team === 'blue' ? 'active' : ''}`;
+        document.getElementById('fb-red').className = `fb-btn ${team === 'red' ? 'active' : ''}`;
+        predict();
     };
+
+    let timer;
+    const debouncedPredict = () => { clearTimeout(timer); timer = setTimeout(predict, 300); };
 
     async function predict() {
         const modelName = document.getElementById('modelSelect').value;
@@ -465,22 +465,14 @@
                 body: JSON.stringify(features)
             });
             const data = await res.json();
-            
             const verdict = document.getElementById('verdict');
             verdict.innerText = data.prediction === 1 ? '블루팀 승리 유력' : '레드팀 승리 유력';
             verdict.className = `verdict-value ${data.prediction === 1 ? 'blue' : 'red'}`;
-            
-            const bPct = (data.blue_win_probability * 100).toFixed(1) + '%';
-            const rPct = (data.red_win_probability * 100).toFixed(1) + '%';
-            
-            document.getElementById('blue-pct').innerText = bPct;
-            document.getElementById('red-pct').innerText = rPct;
-            document.getElementById('bar-blue').style.width = bPct;
-            document.getElementById('bar-red').style.width = rPct;
-            document.getElementById('model-info').innerText = `${modelName} 모델 분석 결과`;
-        } catch (e) {
-            console.error(e);
-        }
+            document.getElementById('blue-pct').innerText = (data.blue_win_probability * 100).toFixed(1) + '%';
+            document.getElementById('red-pct').innerText = (data.red_win_probability * 100).toFixed(1) + '%';
+            document.getElementById('bar-blue').style.width = (data.blue_win_probability * 100) + '%';
+            document.getElementById('bar-red').style.width = (data.red_win_probability * 100) + '%';
+        } catch (e) {}
     }
 
     async function loadMetrics() {
@@ -489,56 +481,35 @@
             const data = await res.json();
             const body = document.getElementById('metricsBody');
             body.innerHTML = '';
-            
             for (let model in data) {
-                const m = data[model];
-                body.innerHTML += `
-                    <tr>
-                        <td style="color: var(--gold-main); font-weight: 600;">${model}</td>
-                        <td><span class="metric-badge">${(m.Accuracy * 100).toFixed(2)}%</span></td>
-                        <td>${(m.Precision * 100).toFixed(2)}%</td>
-                        <td>${(m.Recall * 100).toFixed(2)}%</td>
-                        <td>${(m["F1-Score"] * 100).toFixed(2)}%</td>
-                        <td>${(m["ROC-AUC"] * 100).toFixed(2)}%</td>
-                    </tr>
-                `;
+                body.innerHTML += `<tr><td style="color:var(--gold-main)">${model}</td><td>${(data[model].Accuracy * 100).toFixed(1)}%</td><td>${(data[model]["F1-Score"] * 100).toFixed(1)}%</td><td>${(data[model]["ROC-AUC"] * 100).toFixed(1)}%</td></tr>`;
             }
-        } catch (e) {
-            console.error('Failed to load metrics');
-        }
+        } catch (e) {}
     }
 
     async function handleUpload(file) {
         if (!file) return;
         document.getElementById('loading').style.display = 'flex';
-        
         const formData = new FormData();
         formData.append('file', file);
-        
         try {
             const res = await fetch('/api/parse-scoreboard', { method: 'POST', body: formData });
             const data = await res.json();
-            
-            // Update features
             for (let key in data) {
-                features[key] = data[key];
-                const input = document.getElementById(key);
-                const display = document.getElementById(`val-${key}`);
-                if (input) input.value = data[key];
-                if (display) display.innerText = key.includes('Gold') ? Number(data[key]).toLocaleString() + 'G' : data[key];
+                if (features.hasOwnProperty(key)) {
+                    features[key] = data[key];
+                    const input = document.getElementById(key);
+                    const display = document.getElementById(`val-${key}`);
+                    if (input) input.value = data[key];
+                    if (display) display.innerText = Number(data[key]).toLocaleString();
+                }
             }
             predict();
-        } catch (e) {
-            alert('이미지 분석 실패');
-        } finally {
-            document.getElementById('loading').style.display = 'none';
-        }
+        } catch (e) {} finally { document.getElementById('loading').style.display = 'none'; }
     }
 
-    // Initial setup
     loadMetrics();
     predict();
 </script>
-
 </body>
 </html>
