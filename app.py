@@ -1,6 +1,5 @@
 import os
 import json
-import pandas as pd
 import numpy as np
 import joblib
 import io
@@ -105,11 +104,14 @@ def predict_match():
     ]
     
     try:
-        df_input = pd.DataFrame([full_input])[feature_order]
-        df_input_scaled = scaler.transform(df_input)
+        # Create numpy array in exact feature order
+        input_values = [full_input.get(f, feature_defaults.get(f, 0)) for f in feature_order]
+        X = np.array(input_values).reshape(1, -1)
+        X_scaled = scaler.transform(X)
         
-        blue_win_probability = model.predict_proba(df_input_scaled)[0][1]
-        prediction = int(model.predict(df_input_scaled)[0])
+        proba = model.predict_proba(X_scaled)[0]
+        blue_win_probability = proba[1]
+        prediction = 1 if blue_win_probability >= 0.5 else 0
         
         return jsonify({
             "model_used": model_name,

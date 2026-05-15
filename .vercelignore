@@ -8,3 +8,7 @@ node_modules
 *.pyc
 *.pyo
 .env
+high_diamond_ranked_10min.csv
+train.py
+models_backup
+*.md
