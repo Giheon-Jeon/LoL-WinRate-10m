@@ -19,42 +19,36 @@ except ImportError:
 def train_and_evaluate():
     print("Starting ML Model training process...")
     
-    # 1. Load Dataset
-    # Data path relative to this backend script
+    # 1. 데이터 로드
     data_path = os.path.join(os.path.dirname(__file__), "..", "public", "high_diamond_ranked_10min.csv")
     if not os.path.exists(data_path):
-        # Fallback to absolute path or backup file if exists
         data_path = os.path.join(os.path.dirname(__file__), "..", "high_diamond_ranked_10min.csv.bak")
         if not os.path.exists(data_path):
             raise FileNotFoundError(f"Dataset not found at: {data_path}")
             
-    print(f"Loading data from {data_path}...")
     df = pd.read_csv(data_path)
     
-    # 2. Preprocess Data
-    # Drop identifier
+    # 전처리: ID 컬럼 제거 및 특성/타겟 분리
     if 'gameId' in df.columns:
         df = df.drop(columns=['gameId'])
         
-    # Split features and target
     X = df.drop(columns=['blueWins'])
     y = df['blueWins']
     
-    # Train-test split
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
+    # 테스트 데이터셋 비율을 20%로 하여 split
+    X_tr, X_te, y_tr, y_te = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
     
-    # Feature Scaling
+    # 특성 스케일링 (선형 모델인 로지스틱 회귀를 위해 권장)
     scaler = StandardScaler()
-    X_train_scaled = scaler.fit_transform(X_train)
-    X_test_scaled = scaler.transform(X_test)
+    X_tr_scaled = scaler.fit_transform(X_tr)
+    X_te_scaled = scaler.transform(X_te)
     
-    # Save the scaler
+    # 스케일러 저장 (예측 시 사용)
     models_dir = os.path.join(os.path.dirname(__file__), "models")
     os.makedirs(models_dir, exist_ok=True)
     joblib.dump(scaler, os.path.join(models_dir, "scaler.joblib"))
-    print("Scaler saved successfully.")
-    
-    # Define models to train
+
+    # 2. 모델 학습 (다중 모델 지원)
     models = {
         "Logistic Regression": LogisticRegression(max_iter=1000, random_state=42),
         "Random Forest": RandomForestClassifier(n_estimators=100, max_depth=10, random_state=42)
@@ -68,28 +62,23 @@ def train_and_evaluate():
             random_state=42, 
             eval_metric="logloss"
         )
-    else:
-        print("XGBoost library not found, skipping XGBoost training. (Will use fallbacks)")
         
     metrics_report = {}
     
-    # Train & Evaluate each model
     for model_name, model in models.items():
         print(f"Training {model_name}...")
-        model.fit(X_train_scaled, y_train)
+        model.fit(X_tr_scaled, y_tr)
         
-        # Predictions
-        y_pred = model.predict(X_test_scaled)
-        y_pred_proba = model.predict_proba(X_test_scaled)[:, 1]
+        # 3. 예측 & 평가
+        y_pred = model.predict(X_te_scaled)
+        y_pred_proba = model.predict_proba(X_te_scaled)[:, 1]
         
-        # Calculate metrics
-        acc = accuracy_score(y_test, y_pred)
-        prec = precision_score(y_test, y_pred)
-        rec = recall_score(y_test, y_pred)
-        f1 = f1_score(y_test, y_pred)
-        roc_auc = roc_auc_score(y_test, y_pred_proba)
+        acc = accuracy_score(y_te, y_pred)
+        prec = precision_score(y_te, y_pred)
+        rec = recall_score(y_te, y_pred)
+        f1 = f1_score(y_te, y_pred)
+        roc_auc = roc_auc_score(y_te, y_pred_proba)
         
-        # Save metrics
         metrics_report[model_name] = {
             "Accuracy": float(acc),
             "Precision": float(prec),
@@ -98,17 +87,17 @@ def train_and_evaluate():
             "ROC-AUC": float(roc_auc)
         }
         
-        # Save model weights
+        # 모델 저장
         model_filename = model_name.lower().replace(" ", "_") + ".joblib"
         joblib.dump(model, os.path.join(models_dir, model_filename))
-        print(f"{model_name} trained. Accuracy: {acc:.4f}, F1-Score: {f1:.4f}")
         
-    # Save metrics JSON
+        print(f"[{model_name}] Accuracy: {acc:.4f}, F1-Score: {f1:.4f}")
+        
+    # 결과 요약 저장
     metrics_path = os.path.join(models_dir, "metrics.json")
     with open(metrics_path, "w", encoding="utf-8") as f:
         json.dump(metrics_report, f, indent=4, ensure_ascii=False)
         
-    print(f"All model metrics saved to {metrics_path}.")
     return metrics_report
 
 if __name__ == "__main__":

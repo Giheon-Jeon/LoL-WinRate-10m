@@ -50,6 +50,7 @@ export default function Home() {
     blueTotalExperience: 18200,
     blueTotalMinionsKilled: 215,
     blueTotalJungleMinionsKilled: 50,
+    blueAvgLevel: 6.8,
     
     // Red Team
     redWardsPlaced: 14,
@@ -64,6 +65,7 @@ export default function Home() {
     redTotalExperience: 17200,
     redTotalMinionsKilled: 205,
     redTotalJungleMinionsKilled: 48,
+    redAvgLevel: 6.8,
   });
 
   // Prediction Result State
@@ -127,10 +129,13 @@ export default function Home() {
 
       const data = await res.json();
       setPrediction(data);
+      setPredictionError(null);
     } catch (err: unknown) {
       console.error(err);
       const msg = err instanceof Error ? err.message : String(err);
       setPredictionError(msg || "예측 오류가 발생했습니다. 백엔드 연결을 확인하세요.");
+      // Don't clear prediction here to keep old data visible, 
+      // but the error will show if we handle it in UI
     } finally {
       setIsPredicting(false);
     }
@@ -191,6 +196,8 @@ export default function Home() {
         redTotalExperience: typeof data.redTotalExperience === "number" ? data.redTotalExperience : features.redTotalExperience,
         redTotalMinionsKilled: typeof data.redTotalMinionsKilled === "number" ? data.redTotalMinionsKilled : features.redTotalMinionsKilled,
         redTotalJungleMinionsKilled: typeof data.redTotalJungleMinionsKilled === "number" ? data.redTotalJungleMinionsKilled : features.redTotalJungleMinionsKilled,
+        blueAvgLevel: typeof data.blueAvgLevel === "number" ? data.blueAvgLevel : features.blueAvgLevel,
+        redAvgLevel: typeof data.redAvgLevel === "number" ? data.redAvgLevel : features.redAvgLevel,
       };
 
       setFeatures(newFeatures);
@@ -299,10 +306,20 @@ export default function Home() {
         updated.blueTotalGold = prev.blueTotalGold + (value - prev.blueTowersDestroyed) * 250;
       } else if (name === "redTowersDestroyed") {
         updated.redTotalGold = prev.redTotalGold + (value - prev.redTowersDestroyed) * 250;
+      } else if (name === "blueTotalExperience") {
+        // Levels are tied to Experience
+        updated.blueAvgLevel = Number((value / 2650).toFixed(1));
+      } else if (name === "redTotalExperience") {
+        updated.redAvgLevel = Number((value / 2650).toFixed(1));
       }
       
       return updated;
     });
+    
+    // Provide instant feedback for manual changes too
+    setHighlightedFields([name]);
+    const timer = setTimeout(() => setHighlightedFields([]), 800);
+    return () => clearTimeout(timer);
   };
 
   // Helper to format float to percentage
@@ -496,14 +513,14 @@ export default function Home() {
                 </div>
 
                 {/* Blue Utility features */}
-                <div className={["blueWardsPlaced", "blueTotalExperience"].some(f => highlightedFields.includes(f)) ? "highlight-pulse" : ""} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", marginTop: "1rem", padding: ["blueWardsPlaced", "blueTotalExperience"].some(f => highlightedFields.includes(f)) ? "0.5rem" : "0", transition: "all 0.3s ease" }}>
-                  <div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", marginTop: "1rem" }}>
+                  <div className={highlightedFields.includes("blueWardsPlaced") ? "highlight-pulse" : ""}>
                     <label style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>와드 설치</label>
                     <input type="number" className="range-slider blue-slider" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid var(--border-glass)", color: "white", padding: "0.25rem 0.5rem", borderRadius: "4px", width: "100%" }} value={features.blueWardsPlaced} onChange={(e) => handleFeatureChange("blueWardsPlaced", parseInt(e.target.value) || 0)} />
                   </div>
-                  <div>
-                    <label style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>경험치</label>
-                    <input type="number" className="range-slider blue-slider" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid var(--border-glass)", color: "white", padding: "0.25rem 0.5rem", borderRadius: "4px", width: "100%" }} value={features.blueTotalExperience} onChange={(e) => handleFeatureChange("blueTotalExperience", parseInt(e.target.value) || 0)} />
+                  <div className={highlightedFields.includes("blueAvgLevel") ? "highlight-pulse" : ""}>
+                    <label style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>평균 레벨</label>
+                    <input type="number" step="0.1" className="range-slider blue-slider" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid var(--border-glass)", color: "white", padding: "0.25rem 0.5rem", borderRadius: "4px", width: "100%" }} value={features.blueAvgLevel} onChange={(e) => handleFeatureChange("blueAvgLevel", parseFloat(e.target.value) || 0)} />
                   </div>
                 </div>
 
@@ -586,14 +603,14 @@ export default function Home() {
                 </div>
 
                 {/* Red Utility features */}
-                <div className={["redWardsPlaced", "redTotalExperience"].some(f => highlightedFields.includes(f)) ? "highlight-pulse" : ""} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", marginTop: "1rem", padding: ["redWardsPlaced", "redTotalExperience"].some(f => highlightedFields.includes(f)) ? "0.5rem" : "0", transition: "all 0.3s ease" }}>
-                  <div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.5rem", marginTop: "1rem" }}>
+                  <div className={highlightedFields.includes("redWardsPlaced") ? "highlight-pulse" : ""}>
                     <label style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>와드 설치</label>
                     <input type="number" className="range-slider red-slider" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid var(--border-glass)", color: "white", padding: "0.25rem 0.5rem", borderRadius: "4px", width: "100%" }} value={features.redWardsPlaced} onChange={(e) => handleFeatureChange("redWardsPlaced", parseInt(e.target.value) || 0)} />
                   </div>
-                  <div>
-                    <label style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>경험치</label>
-                    <input type="number" className="range-slider red-slider" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid var(--border-glass)", color: "white", padding: "0.25rem 0.5rem", borderRadius: "4px", width: "100%" }} value={features.redTotalExperience} onChange={(e) => handleFeatureChange("redTotalExperience", parseInt(e.target.value) || 0)} />
+                  <div className={highlightedFields.includes("redAvgLevel") ? "highlight-pulse" : ""}>
+                    <label style={{ fontSize: "0.75rem", color: "var(--text-muted)" }}>평균 레벨</label>
+                    <input type="number" step="0.1" className="range-slider red-slider" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid var(--border-glass)", color: "white", padding: "0.25rem 0.5rem", borderRadius: "4px", width: "100%" }} value={features.redAvgLevel} onChange={(e) => handleFeatureChange("redAvgLevel", parseFloat(e.target.value) || 0)} />
                   </div>
                 </div>
 
@@ -667,72 +684,79 @@ export default function Home() {
               ))}
             </div>
 
-            {isPredicting ? (
-              <div style={{ textAlign: "center", padding: "3rem" }}>
-                <div style={{ width: "40px", height: "40px", border: "3px solid var(--gold-dark)", borderTop: "3px solid var(--gold-main)", borderRadius: "50%", animation: "spin 1s linear infinite", margin: "0 auto" }}></div>
-                <p style={{ marginTop: "1rem", color: "var(--gold-main)", fontFamily: "var(--font-display)" }}>예측 연산 중...</p>
-                <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
-              </div>
-            ) : prediction ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-                
-                {/* Spectral Winrate Bar */}
-                <div>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
-                    <span className="text-blue" style={{ fontWeight: "bold" }}>BLUE {toPercent(prediction.blue_win_probability)}</span>
-                    <span className="text-red" style={{ fontWeight: "bold" }}>RED {toPercent(prediction.red_win_probability)}</span>
-                  </div>
-                  <div style={{ height: "30px", width: "100%", borderRadius: "15px", display: "flex", overflow: "hidden", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 0 15px rgba(0,0,0,0.4)" }}>
-                    <div style={{ width: toPercent(prediction.blue_win_probability), background: "linear-gradient(90deg, #103c61, var(--blue-team))", transition: "width 0.4s ease" }}></div>
-                    <div style={{ width: toPercent(prediction.red_win_probability), background: "linear-gradient(90deg, var(--red-team), #631422)", transition: "width 0.4s ease" }}></div>
-                  </div>
-                </div>
-
-                {/* Verdict Box */}
-                <div style={{
-                  background: prediction.prediction === 1 ? "rgba(31,142,206,0.06)" : "rgba(232,64,87,0.06)",
-                  border: `1px solid ${prediction.prediction === 1 ? "rgba(31,142,206,0.2)" : "rgba(232,64,87,0.2)"}`,
-                  borderRadius: "8px", padding: "1.5rem", textAlign: "center"
+            <div style={{ position: "relative" }}>
+              {isPredicting && (
+                <div style={{ 
+                  position: "absolute", top: 0, left: 0, right: 0, bottom: 0, 
+                  background: "rgba(10, 12, 18, 0.4)", display: "flex", 
+                  justifyContent: "center", alignItems: "center", zIndex: 10,
+                  borderRadius: "8px", backdropFilter: "blur(2px)"
                 }}>
-                  <div style={{ color: "var(--text-secondary)", fontSize: "0.9rem", textTransform: "uppercase" }}>예상 유력 승리팀 (Verdict)</div>
-                  <h3 style={{
-                    fontSize: "2rem", marginTop: "0.5rem",
-                    color: prediction.prediction === 1 ? "var(--blue-glow)" : "var(--red-glow)",
-                    textShadow: prediction.prediction === 1 ? "var(--shadow-blue)" : "var(--shadow-red)"
+                  <div style={{ width: "30px", height: "30px", border: "3px solid var(--gold-dark)", borderTop: "3px solid var(--gold-main)", borderRadius: "50%", animation: "spin 1s linear infinite" }}></div>
+                </div>
+              )}
+
+              {prediction ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem", opacity: isPredicting ? 0.5 : 1, transition: "opacity 0.2s ease" }}>
+                  
+                  {/* Spectral Winrate Bar */}
+                  <div>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
+                      <span className="text-blue" style={{ fontWeight: "bold" }}>BLUE {toPercent(prediction.blue_win_probability)}</span>
+                      <span className="text-red" style={{ fontWeight: "bold" }}>RED {toPercent(prediction.red_win_probability)}</span>
+                    </div>
+                    <div style={{ height: "30px", width: "100%", borderRadius: "15px", display: "flex", overflow: "hidden", border: "1px solid rgba(255,255,255,0.1)", boxShadow: "0 0 15px rgba(0,0,0,0.4)" }}>
+                      <div style={{ width: toPercent(prediction.blue_win_probability), background: "linear-gradient(90deg, #103c61, var(--blue-team))", transition: "width 0.4s ease" }}></div>
+                      <div style={{ width: toPercent(prediction.red_win_probability), background: "linear-gradient(90deg, var(--red-team), #631422)", transition: "width 0.4s ease" }}></div>
+                    </div>
+                  </div>
+
+                  {/* Verdict Box */}
+                  <div style={{
+                    background: prediction.prediction === 1 ? "rgba(31,142,206,0.06)" : "rgba(232,64,87,0.06)",
+                    border: `1px solid ${prediction.prediction === 1 ? "rgba(31,142,206,0.2)" : "rgba(232,64,87,0.2)"}`,
+                    borderRadius: "8px", padding: "1.5rem", textAlign: "center"
                   }}>
-                    {prediction.winner === "Blue" ? "블루팀 승리 유력" : "레드팀 승리 유력"}
-                  </h3>
-                  <p style={{ marginTop: "0.5rem", fontSize: "0.9rem", color: "var(--text-muted)" }}>
-                    현재 입력된 {selectedModel}의 10분 지표를 바탕으로 블루팀의 예상 승률은 <strong>{toPercent(prediction.blue_win_probability)}</strong> 입니다.
-                  </p>
-                </div>
+                    <div style={{ color: "var(--text-secondary)", fontSize: "0.9rem", textTransform: "uppercase" }}>예상 유력 승리팀 (Verdict)</div>
+                    <h3 style={{
+                      fontSize: "2rem", marginTop: "0.5rem",
+                      color: prediction.prediction === 1 ? "var(--blue-glow)" : "var(--red-glow)",
+                      textShadow: prediction.prediction === 1 ? "var(--shadow-blue)" : "var(--shadow-red)"
+                    }}>
+                      {prediction.winner === "Blue" ? "블루팀 승리 유력" : "레드팀 승리 유력"}
+                    </h3>
+                    <p style={{ marginTop: "0.5rem", fontSize: "0.9rem", color: "var(--text-muted)" }}>
+                      현재 입력된 {selectedModel}의 10분 지표를 바탕으로 블루팀의 예상 승률은 <strong>{toPercent(prediction.blue_win_probability)}</strong> 입니다.
+                    </p>
+                  </div>
 
-                {/* Score differences */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }} className="grid-cols-2">
-                  <div style={{ background: "rgba(255,255,255,0.02)", padding: "1rem", borderRadius: "6px", border: "1px solid var(--border-glass)" }}>
-                    <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>골드 차이 (Gold Diff)</div>
-                    <div style={{ fontSize: "1.2rem", fontWeight: "bold", marginTop: "0.25rem", color: features.blueTotalGold - features.redTotalGold >= 0 ? "var(--blue-team)" : "var(--red-team)" }}>
-                      {features.blueTotalGold - features.redTotalGold >= 0 ? "+" : ""}{(features.blueTotalGold - features.redTotalGold).toLocaleString()}G
+                  {/* Score differences */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }} className="grid-cols-2">
+                    <div style={{ background: "rgba(255,255,255,0.02)", padding: "1rem", borderRadius: "6px", border: "1px solid var(--border-glass)" }}>
+                      <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>골드 차이 (Gold Diff)</div>
+                      <div style={{ fontSize: "1.2rem", fontWeight: "bold", marginTop: "0.25rem", color: features.blueTotalGold - features.redTotalGold >= 0 ? "var(--blue-team)" : "var(--red-team)" }}>
+                        {features.blueTotalGold - features.redTotalGold >= 0 ? "+" : ""}{(features.blueTotalGold - features.redTotalGold).toLocaleString()}G
+                      </div>
+                    </div>
+                    <div style={{ background: "rgba(255,255,255,0.02)", padding: "1rem", borderRadius: "6px", border: "1px solid var(--border-glass)" }}>
+                      <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>경험치 차이 (EXP Diff)</div>
+                      <div style={{ fontSize: "1.2rem", fontWeight: "bold", marginTop: "0.25rem", color: features.blueTotalExperience - features.redTotalExperience >= 0 ? "var(--blue-team)" : "var(--red-team)" }}>
+                        {features.blueTotalExperience - features.redTotalExperience >= 0 ? "+" : ""}{(features.blueTotalExperience - features.redTotalExperience).toLocaleString()}
+                      </div>
                     </div>
                   </div>
-                  <div style={{ background: "rgba(255,255,255,0.02)", padding: "1rem", borderRadius: "6px", border: "1px solid var(--border-glass)" }}>
-                    <div style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>경험치 차이 (EXP Diff)</div>
-                    <div style={{ fontSize: "1.2rem", fontWeight: "bold", marginTop: "0.25rem", color: features.blueTotalExperience - features.redTotalExperience >= 0 ? "var(--blue-team)" : "var(--red-team)" }}>
-                      {features.blueTotalExperience - features.redTotalExperience >= 0 ? "+" : ""}{(features.blueTotalExperience - features.redTotalExperience).toLocaleString()}
-                    </div>
-                  </div>
-                </div>
 
-              </div>
-            ) : predictionError ? (
-              <div style={{ color: "var(--red-team)", padding: "1rem", textAlign: "center", background: "rgba(232,64,87,0.1)", borderRadius: "6px", border: "1px solid rgba(232,64,87,0.3)" }}>
-                {predictionError}
-              </div>
-            ) : (
-              <div style={{ textAlign: "center", padding: "2rem", color: "var(--text-muted)" }}>
-                데이터 분석을 대기 중입니다...
-              </div>
-            )}
+                </div>
+              ) : predictionError ? (
+                <div style={{ color: "var(--red-team)", padding: "1rem", textAlign: "center", background: "rgba(232,64,87,0.1)", borderRadius: "6px", border: "1px solid rgba(232,64,87,0.3)" }}>
+                  {predictionError}
+                </div>
+              ) : (
+                <div style={{ textAlign: "center", padding: "2rem", color: "var(--text-muted)" }}>
+                  데이터 분석을 대기 중입니다...
+                </div>
+              )}
+            </div>
           </div>
 
           {/* MODEL METRICS CARD & COMPARISON */}
