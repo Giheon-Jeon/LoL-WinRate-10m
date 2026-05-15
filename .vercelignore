@@ -1,0 +1,10 @@
+.venv
+.venv_new
+.venv_backup
+__pycache__
+.git
+.gemini
+node_modules
+*.pyc
+*.pyo
+.env
