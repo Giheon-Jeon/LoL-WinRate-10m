@@ -1,17 +1,14 @@
 {
     "Logistic Regression": {
-        "Accuracy": 0.71,
-        "F1-Score": 0.71,
-        "ROC-AUC": 0.71
+        "Accuracy": 0.725,
+        "F1-Score": 0.723
     },
     "Random Forest": {
-        "Accuracy": 0.72,
-        "F1-Score": 0.72,
-        "ROC-AUC": 0.72
+        "Accuracy": 0.731,
+        "F1-Score": 0.728
     },
     "MoE Ensemble": {
-        "Accuracy": 0.72,
-        "F1-Score": 0.72,
-        "ROC-AUC": 0.72
+        "Accuracy": 0.734,
+        "F1-Score": 0.731
     }
 }
