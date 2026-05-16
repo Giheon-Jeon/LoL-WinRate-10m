@@ -234,30 +234,51 @@
         .m-num { font-size: 1.1rem; font-weight: 800; color: var(--gold-main); }
 
         /* Confusion Matrix Style */
-        .cm-container {
+        .cm-wrapper {
+            margin-top: 1rem;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            overflow: hidden;
+            background: rgba(0,0,0,0.2);
+        }
+
+        .cm-header-row {
             display: grid;
-            grid-template-columns: 30px 1fr 1fr;
-            grid-template-rows: 20px 1fr 1fr;
-            gap: 4px;
-            font-size: 0.7rem;
+            grid-template-columns: 1fr 1fr;
+            background: rgba(255,255,255,0.05);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            font-size: 0.65rem;
+            color: var(--text-secondary);
             text-align: center;
+            padding: 4px 0;
+        }
+
+        .cm-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
         }
 
         .cm-cell {
-            padding: 10px 5px;
-            border-radius: 4px;
+            padding: 15px 5px;
+            text-align: center;
+            border: 0.5px solid rgba(255,255,255,0.05);
             display: flex;
             flex-direction: column;
             justify-content: center;
-            background: rgba(255,255,255,0.05);
+            transition: background 0.3s;
         }
 
-        .cm-cell.hit { background: rgba(31, 142, 206, 0.2); border: 1px solid var(--blue-team); }
-        .cm-cell.miss { background: rgba(232, 64, 87, 0.1); border: 1px solid rgba(232, 64, 87, 0.3); }
-        .cm-label-row { grid-column: 2 / span 2; color: var(--text-secondary); font-size: 0.6rem; }
-        .cm-label-col { writing-mode: vertical-rl; transform: rotate(180deg); color: var(--text-secondary); font-size: 0.6rem; }
-        .cm-count { font-size: 0.9rem; font-weight: 700; }
-        .cm-sub { font-size: 0.55rem; opacity: 0.7; }
+        .cm-cell.correct { background: rgba(31, 142, 206, 0.08); }
+        .cm-cell.error { background: rgba(232, 64, 87, 0.05); }
+        
+        .cm-tag { font-size: 0.6rem; font-weight: 800; margin-bottom: 4px; }
+        .cm-tag.tn { color: var(--red-team); }
+        .cm-tag.tp { color: var(--blue-team); }
+        .cm-tag.fp, .cm-tag.fn { color: var(--text-secondary); }
+
+        .cm-count { font-size: 1.1rem; font-weight: 800; color: var(--text-primary); }
+        .cm-desc { font-size: 0.55rem; color: var(--text-secondary); margin-top: 2px; }
 
         @media (max-width: 950px) {
             .main-grid { grid-template-columns: 1fr; }
@@ -398,7 +419,7 @@
 
         <div class="metrics-card">
             <h3 style="color: var(--gold-bright); margin-bottom: 0.5rem;">📊 AI 모델 성능 지표 및 혼동 행렬</h3>
-            <p style="color: var(--text-secondary); font-size: 0.75rem; margin-bottom: 1.5rem;">모델별 예측 정확도와 오답 분포를 시각화합니다.</p>
+            <p style="color: var(--text-secondary); font-size: 0.75rem; margin-bottom: 1.5rem;">모델별 예측 정확도와 오답 분포(Confusion Matrix)를 시각화합니다.</p>
             <div class="metrics-grid" id="metricsGrid"></div>
         </div>
     </div>
@@ -472,13 +493,14 @@
                             <div class="m-val"><div class="m-label">F1-Score</div><div class="m-num">${(m["F1-Score"] * 100).toFixed(1)}%</div></div>
                             <div class="m-val"><div class="m-label">ROC-AUC</div><div class="m-num">${auc}</div></div>
                         </div>
-                        <div class="cm-container">
-                            <div class="cm-label-row">Predicted (Red | Blue)</div>
-                            <div class="cm-label-col">Actual</div>
-                            <div class="cm-cell miss"><span class="cm-count">${cm[0][0]}</span><span class="cm-sub">True Red</span></div>
-                            <div class="cm-cell miss"><span class="cm-count">${cm[0][1]}</span><span class="cm-sub">Err (FP)</span></div>
-                            <div class="cm-cell hit"><span class="cm-count">${cm[1][0]}</span><span class="cm-sub">Err (FN)</span></div>
-                            <div class="cm-cell hit"><span class="cm-count">${cm[1][1]}</span><span class="cm-sub">True Blue</span></div>
+                        <div style="font-size: 0.6rem; color: var(--text-secondary); text-align:center; margin-bottom: 4px;">Confusion Matrix (Pred: Red | Blue)</div>
+                        <div class="cm-wrapper">
+                            <div class="cm-grid">
+                                <div class="cm-cell correct"><div class="cm-tag tn">TN</div><div class="cm-count">${cm[0][0]}</div><div class="cm-desc">Act: Red</div></div>
+                                <div class="cm-cell error"><div class="cm-tag fp">FP</div><div class="cm-count">${cm[0][1]}</div><div class="cm-desc">Act: Red</div></div>
+                                <div class="cm-cell error"><div class="cm-tag fn">FN</div><div class="cm-count">${cm[1][0]}</div><div class="cm-desc">Act: Blue</div></div>
+                                <div class="cm-cell correct"><div class="cm-tag tp">TP</div><div class="cm-count">${cm[1][1]}</div><div class="cm-desc">Act: Blue</div></div>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -510,6 +532,8 @@
     loadMetrics();
     predict();
 </script>
+</body>
+</html>
 </body>
 </html>
 </body>
