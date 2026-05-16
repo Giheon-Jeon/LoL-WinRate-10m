@@ -50,14 +50,18 @@ def get_metrics():
         metrics = json.load(f)
     return jsonify(metrics)
 
+def sigmoid(x):
+    return 1 / (1 + np.exp(-x))
+
 def get_prediction_proba(model_module, X_scaled):
     # m2cgen generated 'score' function returns a list or float
     score = model_module.score(X_scaled[0].tolist())
     if isinstance(score, list):
         return score # [prob_0, prob_1]
     else:
-        # For some models it might return a single float (probability of class 1)
-        return [1.0 - score, score]
+        # Logistic Regression returns raw logit, apply sigmoid
+        prob = float(sigmoid(score))
+        return [1.0 - prob, prob]
 
 @app.route("/api/predict", methods=["POST"])
 def predict_match():
