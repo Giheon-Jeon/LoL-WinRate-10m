@@ -43,13 +43,22 @@ def predict_match():
     scaler_file = os.path.join(MODELS_DIR, "scaler.joblib")
     
     if not os.path.exists(model_file) or not os.path.exists(scaler_file):
-        return jsonify({"error": f"Model or scaler not found: {model_name}. Ensure models are uploaded."}), 500
+        # If MoE or specific model is missing, try Random Forest as fallback
+        model_file = os.path.join(MODELS_DIR, "random_forest.joblib")
+        if not os.path.exists(model_file):
+            return jsonify({"error": f"Model or scaler not found. Ensure models are uploaded."}), 500
             
     try:
         model = joblib.load(model_file)
         scaler = joblib.load(scaler_file)
     except Exception as e:
-        return jsonify({"error": f"Error loading models: {str(e)}"}), 500
+        # If loading fails (e.g. missing xgboost for MoE), try Random Forest
+        try:
+            model_file = os.path.join(MODELS_DIR, "random_forest.joblib")
+            model = joblib.load(model_file)
+            scaler = joblib.load(scaler_file)
+        except:
+            return jsonify({"error": f"Error loading models: {str(e)}"}), 500
         
     # Feature engineering (Auto-alignment)
     input_dict = input_data.copy()

@@ -12,3 +12,7 @@ high_diamond_ranked_10min.csv
 train.py
 models_backup
 *.md
+LICENSE
+.gitignore
+.vercel
+.cache

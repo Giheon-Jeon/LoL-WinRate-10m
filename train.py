@@ -1,6 +1,5 @@
 import os
 import json
-import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
@@ -48,18 +47,20 @@ class MoEModel:
 def train_and_evaluate():
     print("Starting ML Model training process...")
     
-    # 1. 데이터 로드
+    # 1. 데이터 로드 (Using numpy instead of pandas to reduce bundle size)
     data_path = os.path.join(os.path.dirname(__file__), "high_diamond_ranked_10min.csv")
     if not os.path.exists(data_path):
         raise FileNotFoundError(f"Dataset not found at: {data_path}")
             
-    df = pd.read_csv(data_path)
+    # Load data skipping header, assuming standard structure
+    # Column indices: blueWins is index 1, gameId is index 0
+    # We use genfromtxt with delimiter=',' and skip_header=1
+    raw_data = np.genfromtxt(data_path, delimiter=',', skip_header=1)
     
-    if 'gameId' in df.columns:
-        df = df.drop(columns=['gameId'])
-        
-    X = df.drop(columns=['blueWins'])
-    y = df['blueWins']
+    # Column mapping (based on header check):
+    # gameId(0), blueWins(1), ...others(2-39)
+    y = raw_data[:, 1]
+    X = raw_data[:, 2:] # Drop gameId and blueWins
     
     X_tr, X_te, y_tr, y_te = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)
     
