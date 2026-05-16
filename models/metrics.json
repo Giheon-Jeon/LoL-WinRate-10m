@@ -1,14 +1,47 @@
 {
     "Logistic Regression": {
-        "Accuracy": 0.725,
-        "F1-Score": 0.723
+        "Accuracy": 0.7161,
+        "F1-Score": 0.7177,
+        "ROC-AUC": 0.8058,
+        "ConfusionMatrix": [
+            [
+                702,
+                288
+            ],
+            [
+                273,
+                713
+            ]
+        ]
     },
     "Random Forest": {
-        "Accuracy": 0.731,
-        "F1-Score": 0.728
+        "Accuracy": 0.7196,
+        "F1-Score": 0.7179,
+        "ROC-AUC": 0.8029,
+        "ConfusionMatrix": [
+            [
+                717,
+                273
+            ],
+            [
+                281,
+                705
+            ]
+        ]
     },
     "MoE Ensemble": {
-        "Accuracy": 0.734,
-        "F1-Score": 0.731
+        "Accuracy": 0.7176,
+        "F1-Score": 0.7179,
+        "ROC-AUC": 0.806,
+        "ConfusionMatrix": [
+            [
+                708,
+                282
+            ],
+            [
+                276,
+                710
+            ]
+        ]
     }
 }
