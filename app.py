@@ -1,13 +1,11 @@
 import os
 import json
 import numpy as np
-import joblib
 import io
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 from PIL import Image
 import google.generativeai as genai
-from train import train_and_evaluate
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 CORS(app)
@@ -38,24 +36,6 @@ def predict_match():
     input_data = request.json
     model_name = request.args.get("model_name", "XGBoost")
     
-    model_key = model_name.lower().replace(" ", "_")
-    model_file = os.path.join(MODELS_DIR, f"{model_key}.joblib")
-    scaler_file = os.path.join(MODELS_DIR, "scaler.joblib")
-    
-    if not os.path.exists(model_file):
-        return jsonify({"error": f"Model not found: {model_name}. Ensure models are trained."}), 500
-            
-    try:
-        model = joblib.load(model_file)
-        scaler = None
-        if model_name == "Logistic Regression":
-            if os.path.exists(scaler_file):
-                scaler = joblib.load(scaler_file)
-            else:
-                return jsonify({"error": "Scaler file not found for Logistic Regression."}), 500
-    except Exception as e:
-        return jsonify({"error": f"Error loading models: {str(e)}"}), 500
-        
     # Feature engineering (Auto-alignment)
     input_dict = input_data.copy()
     
@@ -119,18 +99,50 @@ def predict_match():
         ]
     
     try:
-        # Create numpy array in exact feature order
+        # Create input list in exact feature order
         input_values = [full_input.get(f, feature_defaults.get(f, 0)) for f in feature_order]
-        X = np.array(input_values).reshape(1, -1)
         
-        # Scaling is applied ONLY to Logistic Regression
         if model_name == "Logistic Regression":
-            X_input = scaler.transform(X)
-        else:
-            X_input = X
+            # Load compiled pure Python model dynamically
+            from models.logistic_regression_code import score as lr_score
             
-        proba = model.predict_proba(X_input)[0]
-        blue_win_probability = proba[1]
+            # Load scaler parameters in JSON
+            scaler_file = os.path.join(MODELS_DIR, "scaler.json")
+            if not os.path.exists(scaler_file):
+                return jsonify({"error": "Scaler file (scaler.json) not found."}), 500
+                
+            with open(scaler_file, "r") as f:
+                scaler_data = json.load(f)
+                scaler_mean = scaler_data["mean"]
+                scaler_scale = scaler_data["scale"]
+            
+            # StandardScaler in pure Python: x_scaled = (x - mean) / scale
+            X_scaled = [(x_i - mean_i) / scale_i for x_i, mean_i, scale_i in zip(input_values, scaler_mean, scaler_scale)]
+            
+            # m2cgen logistic regression returns the raw decision margin (log-odds). 
+            # We apply the Sigmoid function to get probability: 1 / (1 + exp(-margin))
+            margin = lr_score(X_scaled)
+            blue_win_probability = 1.0 / (1.0 + np.exp(-margin))
+            
+        elif model_name == "Random Forest":
+            # Load compiled pure Python model dynamically
+            from models.random_forest_code import score as rf_score
+            
+            # Random Forest m2cgen returns probabilities for all classes [prob_loss, prob_win]
+            proba = rf_score(input_values)
+            blue_win_probability = proba[1]
+            
+        elif model_name == "XGBoost":
+            # Load compiled pure Python model dynamically
+            from models.xgboost_code import score as xgb_score
+            
+            # XGBoost m2cgen returns probabilities for all classes [prob_loss, prob_win]
+            proba = xgb_score(input_values)
+            blue_win_probability = proba[1]
+            
+        else:
+            return jsonify({"error": f"Invalid model: {model_name}"}), 400
+            
         prediction = 1 if blue_win_probability >= 0.5 else 0
         
         return jsonify({
@@ -146,6 +158,8 @@ def predict_match():
 @app.route("/api/train", methods=["POST"])
 def train_models():
     try:
+        # Dynamic import to avoid loading heavy ML packages (sklearn, xgboost) on Vercel startup
+        from train import train_and_evaluate
         metrics = train_and_evaluate()
         return jsonify({
             "status": "success",
@@ -153,7 +167,7 @@ def train_models():
             "metrics": metrics
         })
     except Exception as e:
-        return jsonify({"error": f"Failed to train models: {str(e)}"}), 500
+        return jsonify({"error": f"Training is only supported in a local environment with full dependencies. Error: {str(e)}"}), 500
 
 @app.route("/api/parse-scoreboard", methods=["POST"])
 def parse_scoreboard():

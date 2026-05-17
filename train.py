@@ -181,6 +181,40 @@ def train_and_evaluate():
     else:
         print("XGBoost is not installed. Skipping XGBoost model training.")
         
+    # [Vercel 최적화] m2cgen을 사용하여 무의존성 순수 파이썬 모델 코드 컴파일
+    try:
+        import m2cgen as m2c
+        print("Compiling models to pure Python code using m2cgen...")
+        
+        # 1. Logistic Regression 컴파일
+        lr_code = m2c.export_to_python(lr_model)
+        with open(os.path.join(models_dir, "logistic_regression_code.py"), "w", encoding="utf-8") as f:
+            f.write(lr_code)
+            
+        # 2. Random Forest 컴파일 (용량이 크므로 Vercel 최적화를 위해 무의존성으로 컴파일)
+        rf_code = m2c.export_to_python(rf_model)
+        with open(os.path.join(models_dir, "random_forest_code.py"), "w", encoding="utf-8") as f:
+            f.write(rf_code)
+            
+        # 3. XGBoost 컴파일
+        if HAS_XGBOOST:
+            xgb_model.base_score = 0.5
+            xgb_code = m2c.export_to_python(xgb_model)
+            with open(os.path.join(models_dir, "xgboost_code.py"), "w", encoding="utf-8") as f:
+                f.write(xgb_code)
+                
+        # 4. 스케일러 파라미터 JSON으로 별도 저장 (무의존성 전처리용)
+        scaler_data = {
+            "mean": scaler.mean_.tolist(),
+            "scale": scaler.scale_.tolist()
+        }
+        with open(os.path.join(models_dir, "scaler.json"), "w", encoding="utf-8") as f:
+            json.dump(scaler_data, f, indent=4)
+            
+        print("m2cgen model compilation completed successfully!")
+    except Exception as e:
+        print(f"Error compiling models with m2cgen: {str(e)}")
+
     # JSON 파일로 종합 지표 및 성능 저장
     metrics_path = os.path.join(models_dir, "metrics.json")
     with open(metrics_path, "w", encoding="utf-8") as f:
