@@ -39,21 +39,31 @@ def predict_match():
     # Feature engineering (Auto-alignment)
     input_dict = input_data.copy()
     
-    # Matching deaths to kills
-    input_dict['blueDeaths'] = input_data.get('redKills', 0)
-    input_dict['redDeaths'] = input_data.get('blueKills', 0)
+    # Matching deaths to kills (use manual override if provided)
+    if 'blueDeaths' not in input_data:
+        input_dict['blueDeaths'] = input_data.get('redKills', 0)
+    if 'redDeaths' not in input_data:
+        input_dict['redDeaths'] = input_data.get('blueKills', 0)
     
     # Gold/Exp Diffs (Note: redGoldDiff and redExperienceDiff are dropped from model features but kept for tracking)
-    input_dict['blueGoldDiff'] = input_dict.get('blueTotalGold', 16500) - input_dict.get('redTotalGold', 16500)
-    input_dict['redGoldDiff'] = input_dict.get('redTotalGold', 16500) - input_dict.get('blueTotalGold', 16500)
-    input_dict['blueExperienceDiff'] = input_dict.get('blueTotalExperience', 18000) - input_dict.get('redTotalExperience', 18000)
-    input_dict['redExperienceDiff'] = input_dict.get('redTotalExperience', 18000) - input_dict.get('blueTotalExperience', 18000)
+    if 'blueGoldDiff' not in input_data:
+        input_dict['blueGoldDiff'] = input_dict.get('blueTotalGold', 16500) - input_dict.get('redTotalGold', 16500)
+    if 'redGoldDiff' not in input_data:
+        input_dict['redGoldDiff'] = input_dict.get('redTotalGold', 16500) - input_dict.get('blueTotalGold', 16500)
+    if 'blueExperienceDiff' not in input_data:
+        input_dict['blueExperienceDiff'] = input_dict.get('blueTotalExperience', 18000) - input_dict.get('redTotalExperience', 18000)
+    if 'redExperienceDiff' not in input_data:
+        input_dict['redExperienceDiff'] = input_dict.get('redTotalExperience', 18000) - input_dict.get('blueTotalExperience', 18000)
     
     # CS/Gold rates
-    input_dict['blueCSPerMin'] = input_dict.get('blueTotalMinionsKilled', 210) / 10.0
-    input_dict['redCSPerMin'] = input_dict.get('redTotalMinionsKilled', 210) / 10.0
-    input_dict['blueGoldPerMin'] = input_dict.get('blueTotalGold', 16500) / 10.0
-    input_dict['redGoldPerMin'] = input_dict.get('redTotalGold', 16500) / 10.0
+    if 'blueCSPerMin' not in input_data:
+        input_dict['blueCSPerMin'] = input_dict.get('blueTotalMinionsKilled', 210) / 10.0
+    if 'redCSPerMin' not in input_data:
+        input_dict['redCSPerMin'] = input_dict.get('redTotalMinionsKilled', 210) / 10.0
+    if 'blueGoldPerMin' not in input_data:
+        input_dict['blueGoldPerMin'] = input_dict.get('blueTotalGold', 16500) / 10.0
+    if 'redGoldPerMin' not in input_data:
+        input_dict['redGoldPerMin'] = input_dict.get('redTotalGold', 16500) / 10.0
     
     # Objectives
     input_dict['blueEliteMonsters'] = input_dict.get('blueDragons', 0) + input_dict.get('blueHeralds', 0)

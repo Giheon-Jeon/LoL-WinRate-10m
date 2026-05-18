@@ -583,6 +583,10 @@
                     <input type="range" id="blueKills" min="0" max="30" value="0" oninput="updateVal('blueKills', this.value)">
                 </div>
                 <div class="stat-group">
+                    <div class="stat-label"><span>총 데스 (Deaths)</span><span id="val-blueDeaths">0</span></div>
+                    <input type="range" id="blueDeaths" min="0" max="30" value="0" oninput="updateVal('blueDeaths', this.value)">
+                </div>
+                <div class="stat-group">
                     <div class="stat-label"><span>어시스트 (Assists)</span><span id="val-blueAssists">0</span></div>
                     <input type="range" id="blueAssists" min="0" max="50" value="0" oninput="updateVal('blueAssists', this.value)">
                 </div>
@@ -609,6 +613,24 @@
                 <div class="stat-group">
                     <div class="stat-label"><span>정글 미니언 처치</span><span id="val-blueTotalJungleMinionsKilled">0</span></div>
                     <input type="range" id="blueTotalJungleMinionsKilled" min="0" max="100" value="0" oninput="updateVal('blueTotalJungleMinionsKilled', this.value)">
+                </div>
+                <div class="stat-group">
+                    <div class="stat-label"><span>골드 격차 (Gold Diff)</span><span id="val-blueGoldDiff">0</span></div>
+                    <input type="range" id="blueGoldDiff" min="-15000" max="15000" step="100" value="0" oninput="updateVal('blueGoldDiff', this.value)">
+                </div>
+                <div class="stat-group">
+                    <div class="stat-label"><span>경험치 격차 (Exp Diff)</span><span id="val-blueExperienceDiff">0</span></div>
+                    <input type="range" id="blueExperienceDiff" min="-15000" max="15000" step="100" value="0" oninput="updateVal('blueExperienceDiff', this.value)">
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                    <div class="stat-group">
+                        <div class="stat-label"><span>분당 CS</span><span id="val-blueCSPerMin">0.0</span></div>
+                        <input type="range" id="blueCSPerMin" min="0" max="40" step="0.1" value="0" oninput="updateVal('blueCSPerMin', this.value)">
+                    </div>
+                    <div class="stat-group">
+                        <div class="stat-label"><span>분당 골드</span><span id="val-blueGoldPerMin">0</span></div>
+                        <input type="range" id="blueGoldPerMin" min="500" max="3000" step="10" value="0" oninput="updateVal('blueGoldPerMin', this.value)">
+                    </div>
                 </div>
             </div>
 
@@ -656,6 +678,10 @@
                     <input type="range" id="redKills" min="0" max="30" value="0" oninput="updateVal('redKills', this.value)">
                 </div>
                 <div class="stat-group">
+                    <div class="stat-label"><span>총 데스 (Deaths)</span><span id="val-redDeaths">0</span></div>
+                    <input type="range" id="redDeaths" min="0" max="30" value="0" oninput="updateVal('redDeaths', this.value)">
+                </div>
+                <div class="stat-group">
                     <div class="stat-label"><span>어시스트 (Assists)</span><span id="val-redAssists">0</span></div>
                     <input type="range" id="redAssists" min="0" max="50" value="0" oninput="updateVal('redAssists', this.value)">
                 </div>
@@ -682,6 +708,24 @@
                 <div class="stat-group">
                     <div class="stat-label"><span>정글 미니언 처치</span><span id="val-redTotalJungleMinionsKilled">0</span></div>
                     <input type="range" id="redTotalJungleMinionsKilled" min="0" max="100" value="0" oninput="updateVal('redTotalJungleMinionsKilled', this.value)">
+                </div>
+                <div class="stat-group">
+                    <div class="stat-label"><span>골드 격차 (Gold Diff)</span><span id="val-redGoldDiff">0</span></div>
+                    <input type="range" id="redGoldDiff" min="-15000" max="15000" step="100" value="0" oninput="updateVal('redGoldDiff', this.value)">
+                </div>
+                <div class="stat-group">
+                    <div class="stat-label"><span>경험치 격차 (Exp Diff)</span><span id="val-redExperienceDiff">0</span></div>
+                    <input type="range" id="redExperienceDiff" min="-15000" max="15000" step="100" value="0" oninput="updateVal('redExperienceDiff', this.value)">
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                    <div class="stat-group">
+                        <div class="stat-label"><span>분당 CS</span><span id="val-redCSPerMin">0.0</span></div>
+                        <input type="range" id="redCSPerMin" min="0" max="40" step="0.1" value="0" oninput="updateVal('redCSPerMin', this.value)">
+                    </div>
+                    <div class="stat-group">
+                        <div class="stat-label"><span>분당 골드</span><span id="val-redGoldPerMin">0</span></div>
+                        <input type="range" id="redGoldPerMin" min="500" max="3000" step="10" value="0" oninput="updateVal('redGoldPerMin', this.value)">
+                    </div>
                 </div>
             </div>
 
@@ -972,9 +1016,11 @@
         blueWardsPlaced: 15, blueWardsDestroyed: 2, blueFirstBlood: 1, blueKills: 5, blueDeaths: 5, blueAssists: 5,
         blueEliteMonsters: 0, blueDragons: 0, blueHeralds: 0, blueTowersDestroyed: 0, blueTotalGold: 16500, blueAvgLevel: 6.8,
         blueTotalExperience: 18000, blueTotalMinionsKilled: 210, blueTotalJungleMinionsKilled: 50,
+        blueGoldDiff: 0, blueExperienceDiff: 0, blueCSPerMin: 21.0, blueGoldPerMin: 1650.0,
         redWardsPlaced: 15, redWardsDestroyed: 2, redFirstBlood: 0, redKills: 5, redDeaths: 5, redAssists: 5,
         redEliteMonsters: 0, redDragons: 0, redHeralds: 0, redTowersDestroyed: 0, redTotalGold: 16500, redAvgLevel: 6.8,
-        redTotalExperience: 18000, redTotalMinionsKilled: 210, redTotalJungleMinionsKilled: 50
+        redTotalExperience: 18000, redTotalMinionsKilled: 210, redTotalJungleMinionsKilled: 50,
+        redGoldDiff: 0, redExperienceDiff: 0, redCSPerMin: 21.0, redGoldPerMin: 1650.0
     };
 
     let metricsData = null;
@@ -983,7 +1029,11 @@
     const updateVal = (id, val) => {
         const display = document.getElementById(`val-${id}`);
         if (display) {
-            display.innerText = Number(val).toLocaleString();
+            if (id.includes('Diff')) {
+                display.innerText = (parseFloat(val) > 0 ? '+' : '') + Number(val).toLocaleString();
+            } else {
+                display.innerText = Number(val).toLocaleString();
+            }
         }
         features[id] = parseFloat(val);
         
@@ -994,13 +1044,129 @@
             const rVal = document.getElementById('val-redDeaths');
             if (rDeaths) rDeaths.value = val;
             if (rVal) rVal.innerText = Number(val).toLocaleString();
+        } else if (id === 'redDeaths') {
+            features.blueKills = parseFloat(val);
+            const bKills = document.getElementById('blueKills');
+            const bVal = document.getElementById('val-blueKills');
+            if (bKills) bKills.value = val;
+            if (bVal) bVal.innerText = Number(val).toLocaleString();
         }
+        
         if (id === 'redKills') { 
             features.blueDeaths = parseFloat(val); 
             const bDeaths = document.getElementById('blueDeaths');
             const bVal = document.getElementById('val-blueDeaths');
             if (bDeaths) bDeaths.value = val;
             if (bVal) bVal.innerText = Number(val).toLocaleString();
+        } else if (id === 'blueDeaths') {
+            features.redKills = parseFloat(val);
+            const rKills = document.getElementById('redKills');
+            const rVal = document.getElementById('val-redKills');
+            if (rKills) rKills.value = val;
+            if (rVal) rVal.innerText = Number(val).toLocaleString();
+        }
+
+        // Gold & Exp Difference sync
+        if (id === 'blueGoldDiff') {
+            const opposingVal = -parseFloat(val);
+            features.redGoldDiff = opposingVal;
+            const rGoldDiff = document.getElementById('redGoldDiff');
+            const rVal = document.getElementById('val-redGoldDiff');
+            if (rGoldDiff) rGoldDiff.value = opposingVal;
+            if (rVal) rVal.innerText = (opposingVal > 0 ? '+' : '') + Number(opposingVal).toLocaleString();
+        } else if (id === 'redGoldDiff') {
+            const opposingVal = -parseFloat(val);
+            features.blueGoldDiff = opposingVal;
+            const bGoldDiff = document.getElementById('blueGoldDiff');
+            const bVal = document.getElementById('val-blueGoldDiff');
+            if (bGoldDiff) bGoldDiff.value = opposingVal;
+            if (bVal) bVal.innerText = (opposingVal > 0 ? '+' : '') + Number(opposingVal).toLocaleString();
+        }
+
+        if (id === 'blueExperienceDiff') {
+            const opposingVal = -parseFloat(val);
+            features.redExperienceDiff = opposingVal;
+            const rExpDiff = document.getElementById('redExperienceDiff');
+            const rVal = document.getElementById('val-redExperienceDiff');
+            if (rExpDiff) rExpDiff.value = opposingVal;
+            if (rVal) rVal.innerText = (opposingVal > 0 ? '+' : '') + Number(opposingVal).toLocaleString();
+        } else if (id === 'redExperienceDiff') {
+            const opposingVal = -parseFloat(val);
+            features.blueExperienceDiff = opposingVal;
+            const bExpDiff = document.getElementById('blueExperienceDiff');
+            const bVal = document.getElementById('val-blueExperienceDiff');
+            if (bExpDiff) bExpDiff.value = opposingVal;
+            if (bVal) bVal.innerText = (opposingVal > 0 ? '+' : '') + Number(opposingVal).toLocaleString();
+        }
+
+        // Derived Sync (derived values computed from base stats)
+        if (id === 'blueTotalGold' || id === 'redTotalGold') {
+            const bGold = parseFloat(document.getElementById('blueTotalGold').value);
+            const rGold = parseFloat(document.getElementById('redTotalGold').value);
+            
+            const gDiff = bGold - rGold;
+            features.blueGoldDiff = gDiff;
+            features.redGoldDiff = -gDiff;
+            
+            const bGoldDiffInput = document.getElementById('blueGoldDiff');
+            const rGoldDiffInput = document.getElementById('redGoldDiff');
+            if (bGoldDiffInput) bGoldDiffInput.value = gDiff;
+            if (rGoldDiffInput) rGoldDiffInput.value = -gDiff;
+            
+            const bGoldDiffVal = document.getElementById('val-blueGoldDiff');
+            const rGoldDiffVal = document.getElementById('val-redGoldDiff');
+            if (bGoldDiffVal) bGoldDiffVal.innerText = (gDiff > 0 ? '+' : '') + Number(gDiff).toLocaleString();
+            if (rGoldDiffVal) rGoldDiffVal.innerText = (-gDiff > 0 ? '+' : '') + Number(-gDiff).toLocaleString();
+
+            // Gold per min
+            features.blueGoldPerMin = bGold / 10.0;
+            features.redGoldPerMin = rGold / 10.0;
+            const bGpmInput = document.getElementById('blueGoldPerMin');
+            const rGpmInput = document.getElementById('redGoldPerMin');
+            if (bGpmInput) bGpmInput.value = bGold / 10.0;
+            if (rGpmInput) rGpmInput.value = rGold / 10.0;
+            
+            const bGpmVal = document.getElementById('val-blueGoldPerMin');
+            const rGpmVal = document.getElementById('val-redGoldPerMin');
+            if (bGpmVal) bGpmVal.innerText = Number(bGold / 10.0).toLocaleString();
+            if (rGpmVal) rGpmVal.innerText = Number(rGold / 10.0).toLocaleString();
+        }
+
+        if (id === 'blueTotalExperience' || id === 'redTotalExperience') {
+            const bExp = parseFloat(document.getElementById('blueTotalExperience').value);
+            const rExp = parseFloat(document.getElementById('redTotalExperience').value);
+            
+            const eDiff = bExp - rExp;
+            features.blueExperienceDiff = eDiff;
+            features.redExperienceDiff = -eDiff;
+            
+            const bExpDiffInput = document.getElementById('blueExperienceDiff');
+            const rExpDiffInput = document.getElementById('redExperienceDiff');
+            if (bExpDiffInput) bExpDiffInput.value = eDiff;
+            if (rExpDiffInput) rExpDiffInput.value = -eDiff;
+            
+            const bExpDiffVal = document.getElementById('val-blueExperienceDiff');
+            const rExpDiffVal = document.getElementById('val-redExperienceDiff');
+            if (bExpDiffVal) bExpDiffVal.innerText = (eDiff > 0 ? '+' : '') + Number(eDiff).toLocaleString();
+            if (rExpDiffVal) rExpDiffVal.innerText = (-eDiff > 0 ? '+' : '') + Number(-eDiff).toLocaleString();
+        }
+
+        if (id === 'blueTotalMinionsKilled') {
+            const valNum = parseFloat(val);
+            features.blueCSPerMin = valNum / 10.0;
+            const csInput = document.getElementById('blueCSPerMin');
+            const csVal = document.getElementById('val-blueCSPerMin');
+            if (csInput) csInput.value = valNum / 10.0;
+            if (csVal) csVal.innerText = Number(valNum / 10.0).toLocaleString();
+        }
+
+        if (id === 'redTotalMinionsKilled') {
+            const valNum = parseFloat(val);
+            features.redCSPerMin = valNum / 10.0;
+            const csInput = document.getElementById('redCSPerMin');
+            const csVal = document.getElementById('val-redCSPerMin');
+            if (csInput) csInput.value = valNum / 10.0;
+            if (csVal) csVal.innerText = Number(valNum / 10.0).toLocaleString();
         }
         
         debouncedPredict();
@@ -1092,6 +1258,8 @@
             'redTotalExperience': '총 경험치 (레드)',
             'redTotalMinionsKilled': '미니언 처치 (레드)',
             'redTotalJungleMinionsKilled': '정글 몹 처치 (레드)',
+            'redGoldDiff': '골드 격차 (레드)',
+            'redExperienceDiff': '경험치 격차 (레드)',
             'redCSPerMin': '분당 CS (레드)',
             'redGoldPerMin': '분당 골드 (레드)'
         };
@@ -1309,11 +1477,7 @@
             
             for (let key in data) {
                 if (features.hasOwnProperty(key)) {
-                    features[key] = data[key];
-                    const input = document.getElementById(key);
-                    const display = document.getElementById(`val-${key}`);
-                    if (input) input.value = data[key];
-                    if (display) display.innerText = Number(data[key]).toLocaleString();
+                    updateVal(key, data[key]);
                 }
             }
             
@@ -1332,7 +1496,13 @@
             const input = document.getElementById(key);
             const val = document.getElementById(`val-${key}`);
             if (input) input.value = features[key];
-            if (val) val.innerText = Number(features[key]).toLocaleString();
+            if (val) {
+                if (key.includes('Diff')) {
+                    val.innerText = (features[key] > 0 ? '+' : '') + Number(features[key]).toLocaleString();
+                } else {
+                    val.innerText = Number(features[key]).toLocaleString();
+                }
+            }
         }
     }
 
