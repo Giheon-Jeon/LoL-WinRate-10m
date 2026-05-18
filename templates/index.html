@@ -121,9 +121,111 @@
             margin-bottom: 2rem;
             text-align: center;
             box-shadow: var(--shadow-glow);
-            position: relative;
+            position: sticky;
+            top: 10px;
+            z-index: 999;
             overflow: hidden;
-            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .model-select-wrapper {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            z-index: 10;
+        }
+
+        /* Sticky Compact overrides */
+        .prediction-hero.sticky-compact {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.5rem;
+            padding: 0.6rem 1.5rem;
+            border-radius: 16px;
+            background: rgba(10, 15, 23, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(200, 170, 110, 0.25);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 15px rgba(200, 170, 110, 0.15);
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+        
+        .prediction-hero.sticky-compact::before {
+            height: 3px;
+        }
+        
+        .prediction-hero.sticky-compact .model-select-wrapper {
+            position: static;
+            order: 1;
+        }
+        
+        .prediction-hero.sticky-compact select {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+        
+        .prediction-hero.sticky-compact .verdict-title {
+            display: none;
+        }
+        
+        .prediction-hero.sticky-compact .verdict-value {
+            font-size: 1.1rem;
+            margin: 0;
+            order: 2;
+            min-width: 120px;
+            text-align: left;
+        }
+        
+        .prediction-hero.sticky-compact .pct-display {
+            display: flex !important;
+            justify-content: flex-start !important;
+            gap: 1rem !important;
+            margin: 0 !important;
+            order: 3;
+            font-weight: 700;
+        }
+        
+        .prediction-hero.sticky-compact .pct-display span {
+            font-size: 0.95rem !important;
+        }
+        
+        .prediction-hero.sticky-compact .winrate-bar-container {
+            flex: 1;
+            margin: 0;
+            height: 8px;
+            order: 4;
+            min-width: 150px;
+        }
+        
+        .prediction-hero.sticky-compact #model-info {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .prediction-hero.sticky-compact {
+                flex-direction: column;
+                gap: 0.4rem;
+                align-items: stretch;
+                padding: 0.6rem 1rem;
+            }
+            .prediction-hero.sticky-compact .model-select-wrapper {
+                align-self: flex-end;
+            }
+            .prediction-hero.sticky-compact .verdict-value {
+                font-size: 1rem;
+                text-align: center;
+            }
+            .prediction-hero.sticky-compact .pct-display {
+                justify-content: space-between !important;
+            }
+            .prediction-hero.sticky-compact .winrate-bar-container {
+                height: 6px;
+                min-width: unset;
+            }
         }
 
         .prediction-hero::before {
@@ -542,7 +644,7 @@
 
     <!-- Win Rate Real-Time Prediction Card -->
     <div class="prediction-hero" id="hero">
-        <div style="position: absolute; top: 1.5rem; right: 1.5rem;">
+        <div class="model-select-wrapper">
             <select id="modelSelect" onchange="predict()">
                 <option value="XGBoost" selected>최적화 모델: XGBoost</option>
                 <option value="Random Forest">비교 모델: Random Forest</option>
@@ -553,7 +655,7 @@
         <div class="verdict-title">승률 예측 (지표 실시간 변경 분석)</div>
         <div class="verdict-value blue" id="verdict">블루팀 승리 유력</div>
         
-        <div style="display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 0.5rem;">
+        <div class="pct-display" style="display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 0.5rem;">
             <span style="color: var(--blue-team); font-size: 1.1rem;">블루팀 <span id="blue-pct">50.0%</span></span>
             <span style="color: var(--red-team); font-size: 1.1rem;">레드팀 <span id="red-pct">50.0%</span></span>
         </div>
@@ -1505,6 +1607,16 @@
             }
         }
     }
+
+    // Scroll Listener for Sticky Compact Header
+    window.addEventListener('scroll', () => {
+        const hero = document.getElementById('hero');
+        if (window.scrollY > 200) {
+            hero.classList.add('sticky-compact');
+        } else {
+            hero.classList.remove('sticky-compact');
+        }
+    });
 
     initInputs();
     loadMetrics();
