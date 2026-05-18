@@ -118,12 +118,10 @@
             border: 1px solid var(--border-glass);
             border-radius: 24px;
             padding: 3rem;
-            margin-bottom: 2rem;
+            margin-bottom: 0; /* Spacing handled by the wrapper */
             text-align: center;
             box-shadow: var(--shadow-glow);
-            position: sticky;
-            top: 10px;
-            z-index: 999;
+            position: relative;
             overflow: hidden;
             transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
         }
@@ -137,6 +135,13 @@
 
         /* Sticky Compact overrides */
         .prediction-hero.sticky-compact {
+            position: fixed;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 3rem);
+            max-width: 1140px;
+            z-index: 999;
             display: flex;
             flex-direction: row;
             align-items: center;
@@ -149,7 +154,7 @@
             -webkit-backdrop-filter: blur(20px);
             border: 1px solid rgba(200, 170, 110, 0.25);
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 15px rgba(200, 170, 110, 0.15);
-            margin-bottom: 1.5rem;
+            margin-bottom: 0;
             text-align: left;
         }
         
@@ -642,29 +647,31 @@
         </table>
     </div>
 
-    <!-- Win Rate Real-Time Prediction Card -->
-    <div class="prediction-hero" id="hero">
-        <div class="model-select-wrapper">
-            <select id="modelSelect" onchange="predict()">
-                <option value="XGBoost" selected>최적화 모델: XGBoost</option>
-                <option value="Random Forest">비교 모델: Random Forest</option>
-                <option value="Logistic Regression">베이스라인: Logistic Regression</option>
-            </select>
+    <!-- Win Rate Real-Time Prediction Card Wrapper to prevent scroll jitter/jumping -->
+    <div id="hero-wrapper" style="margin-bottom: 2rem;">
+        <div class="prediction-hero" id="hero">
+            <div class="model-select-wrapper">
+                <select id="modelSelect" onchange="predict()">
+                    <option value="XGBoost" selected>최적화 모델: XGBoost</option>
+                    <option value="Random Forest">비교 모델: Random Forest</option>
+                    <option value="Logistic Regression">베이스라인: Logistic Regression</option>
+                </select>
+            </div>
+            
+            <div class="verdict-title">승률 예측 (지표 실시간 변경 분석)</div>
+            <div class="verdict-value blue" id="verdict">블루팀 승리 유력</div>
+            
+            <div class="pct-display" style="display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 0.5rem;">
+                <span style="color: var(--blue-team); font-size: 1.1rem;">블루팀 <span id="blue-pct">50.0%</span></span>
+                <span style="color: var(--red-team); font-size: 1.1rem;">레드팀 <span id="red-pct">50.0%</span></span>
+            </div>
+            
+            <div class="winrate-bar-container">
+                <div class="winrate-blue" id="bar-blue" style="width: 50%"></div>
+                <div class="winrate-red" id="bar-red" style="width: 50%"></div>
+            </div>
+            <p style="color: var(--text-secondary); font-size: 0.85rem;" id="model-info">AI 모델 실시간 승률 예측 엔진 가동 중</p>
         </div>
-        
-        <div class="verdict-title">승률 예측 (지표 실시간 변경 분석)</div>
-        <div class="verdict-value blue" id="verdict">블루팀 승리 유력</div>
-        
-        <div class="pct-display" style="display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 0.5rem;">
-            <span style="color: var(--blue-team); font-size: 1.1rem;">블루팀 <span id="blue-pct">50.0%</span></span>
-            <span style="color: var(--red-team); font-size: 1.1rem;">레드팀 <span id="red-pct">50.0%</span></span>
-        </div>
-        
-        <div class="winrate-bar-container">
-            <div class="winrate-blue" id="bar-blue" style="width: 50%"></div>
-            <div class="winrate-red" id="bar-red" style="width: 50%"></div>
-        </div>
-        <p style="color: var(--text-secondary); font-size: 0.85rem;" id="model-info">AI 모델 실시간 승률 예측 엔진 가동 중</p>
     </div>
 
     <div class="fb-container">
@@ -1608,21 +1615,43 @@
         }
     }
 
-    // Scroll Listener for Sticky Compact Header (Triggers exactly when the element hits the top boundary)
+    // Scroll Listener for Sticky Compact Header (Triggers exactly when the element hits the top boundary without layout shifting)
     let initialOffsetTop = 0;
+    
+    function updateOffsetTop() {
+        const wrapper = document.getElementById('hero-wrapper');
+        if (wrapper) {
+            initialOffsetTop = wrapper.getBoundingClientRect().top + window.scrollY;
+        }
+    }
+    
     window.addEventListener('scroll', () => {
         const hero = document.getElementById('hero');
-        if (!hero) return;
+        const wrapper = document.getElementById('hero-wrapper');
+        if (!hero || !wrapper) return;
         
         if (window.scrollY === 0 || initialOffsetTop === 0) {
-            initialOffsetTop = hero.getBoundingClientRect().top + window.scrollY;
+            updateOffsetTop();
         }
         
         if (window.scrollY > (initialOffsetTop - 10)) {
-            hero.classList.add('sticky-compact');
+            if (!hero.classList.contains('sticky-compact')) {
+                // Lock the wrapper height to prevent layout collapse
+                const currentHeight = hero.offsetHeight;
+                wrapper.style.height = currentHeight + 'px';
+                hero.classList.add('sticky-compact');
+            }
         } else {
-            hero.classList.remove('sticky-compact');
+            if (hero.classList.contains('sticky-compact')) {
+                // Restore wrapper auto height
+                wrapper.style.height = 'auto';
+                hero.classList.remove('sticky-compact');
+            }
         }
+    });
+
+    window.addEventListener('resize', () => {
+        initialOffsetTop = 0; // Trigger offset recalculation on resize
     });
 
     initInputs();
