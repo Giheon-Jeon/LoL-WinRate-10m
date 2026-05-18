@@ -1608,10 +1608,17 @@
         }
     }
 
-    // Scroll Listener for Sticky Compact Header
+    // Scroll Listener for Sticky Compact Header (Triggers exactly when the element hits the top boundary)
+    let initialOffsetTop = 0;
     window.addEventListener('scroll', () => {
         const hero = document.getElementById('hero');
-        if (window.scrollY > 200) {
+        if (!hero) return;
+        
+        if (window.scrollY === 0 || initialOffsetTop === 0) {
+            initialOffsetTop = hero.getBoundingClientRect().top + window.scrollY;
+        }
+        
+        if (window.scrollY > (initialOffsetTop - 10)) {
             hero.classList.add('sticky-compact');
         } else {
             hero.classList.remove('sticky-compact');
