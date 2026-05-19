@@ -723,14 +723,6 @@
                     <div class="stat-label"><span>정글 미니언 처치</span><span id="val-blueTotalJungleMinionsKilled">0</span></div>
                     <input type="range" id="blueTotalJungleMinionsKilled" min="0" max="100" value="0" oninput="updateVal('blueTotalJungleMinionsKilled', this.value)">
                 </div>
-                <div class="stat-group">
-                    <div class="stat-label"><span>골드 격차 (Gold Diff)</span><span id="val-blueGoldDiff">0</span></div>
-                    <input type="range" id="blueGoldDiff" min="-15000" max="15000" step="100" value="0" oninput="updateVal('blueGoldDiff', this.value)">
-                </div>
-                <div class="stat-group">
-                    <div class="stat-label"><span>경험치 격차 (Exp Diff)</span><span id="val-blueExperienceDiff">0</span></div>
-                    <input type="range" id="blueExperienceDiff" min="-15000" max="15000" step="100" value="0" oninput="updateVal('blueExperienceDiff', this.value)">
-                </div>
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
                     <div class="stat-group">
                         <div class="stat-label"><span>분당 CS</span><span id="val-blueCSPerMin">0.0</span></div>
@@ -818,14 +810,6 @@
                     <div class="stat-label"><span>정글 미니언 처치</span><span id="val-redTotalJungleMinionsKilled">0</span></div>
                     <input type="range" id="redTotalJungleMinionsKilled" min="0" max="100" value="0" oninput="updateVal('redTotalJungleMinionsKilled', this.value)">
                 </div>
-                <div class="stat-group">
-                    <div class="stat-label"><span>골드 격차 (Gold Diff)</span><span id="val-redGoldDiff">0</span></div>
-                    <input type="range" id="redGoldDiff" min="-15000" max="15000" step="100" value="0" oninput="updateVal('redGoldDiff', this.value)">
-                </div>
-                <div class="stat-group">
-                    <div class="stat-label"><span>경험치 격차 (Exp Diff)</span><span id="val-redExperienceDiff">0</span></div>
-                    <input type="range" id="redExperienceDiff" min="-15000" max="15000" step="100" value="0" oninput="updateVal('redExperienceDiff', this.value)">
-                </div>
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
                     <div class="stat-group">
                         <div class="stat-label"><span>분당 CS</span><span id="val-redCSPerMin">0.0</span></div>
@@ -866,6 +850,46 @@
                     <div class="stat-group">
                         <div class="stat-label"><span>와드 제거</span><span id="val-redWardsDestroyed">0</span></div>
                         <input type="range" id="redWardsDestroyed" min="0" max="20" value="0" oninput="updateVal('redWardsDestroyed', this.value)">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Team Gaps (Read-Only) -->
+    <div class="gaps-section-card" style="margin-top: 2rem; background: var(--bg-card); backdrop-filter: blur(12px); border: 1px solid var(--border-glass); border-radius: 20px; padding: 2rem; box-shadow: var(--shadow-glow); position: relative; overflow: hidden;">
+        <h3 style="color: var(--gold-bright); margin-bottom: 1.5rem; font-size: 1.1rem; border-left: 4px solid var(--gold-main); padding-left: 0.6rem; font-family: 'Outfit', sans-serif;">⚖️ 양 팀 실시간 지표 격차 분석</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+            <!-- Blue Team Gaps (Relative to Red Team) -->
+            <div style="padding: 1.2rem; background: rgba(31, 142, 206, 0.03); border-radius: 12px; border-left: 4px solid var(--blue-team); border-right: 1px solid rgba(31, 142, 206, 0.1); border-top: 1px solid rgba(31, 142, 206, 0.1); border-bottom: 1px solid rgba(31, 142, 206, 0.1);">
+                <h4 style="color: var(--blue-team); font-size: 0.95rem; margin-bottom: 1.2rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="font-size: 1.1rem;">🔵</span> 블루팀 기준 격차 (vs 레드팀)
+                </h4>
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.7rem;">
+                        <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 500;">골드 격차 (Gold Diff)</span>
+                        <span id="val-blueGoldDiff" style="font-family: 'Outfit', sans-serif; font-size: 1.3rem; font-weight: 800; color: var(--text-primary); transition: all 0.3s ease;">0</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.7rem;">
+                        <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 500;">경험치 격차 (Exp Diff)</span>
+                        <span id="val-blueExperienceDiff" style="font-family: 'Outfit', sans-serif; font-size: 1.3rem; font-weight: 800; color: var(--text-primary); transition: all 0.3s ease;">0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Red Team Gaps (Relative to Blue Team) -->
+            <div style="padding: 1.2rem; background: rgba(232, 64, 87, 0.03); border-radius: 12px; border-left: 4px solid var(--red-team); border-right: 1px solid rgba(232, 64, 87, 0.1); border-top: 1px solid rgba(232, 64, 87, 0.1); border-bottom: 1px solid rgba(232, 64, 87, 0.1);">
+                <h4 style="color: var(--red-team); font-size: 0.95rem; margin-bottom: 1.2rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
+                    <span style="font-size: 1.1rem;">🔴</span> 레드팀 기준 격차 (vs 블루팀)
+                </h4>
+                <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.7rem;">
+                        <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 500;">골드 격차 (Gold Diff)</span>
+                        <span id="val-redGoldDiff" style="font-family: 'Outfit', sans-serif; font-size: 1.3rem; font-weight: 800; color: var(--text-primary); transition: all 0.3s ease;">0</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.7rem;">
+                        <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 500;">경험치 격차 (Exp Diff)</span>
+                        <span id="val-redExperienceDiff" style="font-family: 'Outfit', sans-serif; font-size: 1.3rem; font-weight: 800; color: var(--text-primary); transition: all 0.3s ease;">0</span>
                     </div>
                 </div>
             </div>
@@ -1135,11 +1159,29 @@
     let metricsData = null;
     let charts = {};
 
+    const updateDiffColor = (id, val) => {
+        const display = document.getElementById(`val-${id}`);
+        if (!display) return;
+        
+        display.innerText = (val > 0 ? '+' : '') + Number(val).toLocaleString();
+        
+        if (val > 0) {
+            display.style.color = 'var(--blue-team)';
+            display.style.textShadow = '0 0 10px rgba(31, 142, 206, 0.4)';
+        } else if (val < 0) {
+            display.style.color = 'var(--red-team)';
+            display.style.textShadow = '0 0 10px rgba(232, 64, 87, 0.4)';
+        } else {
+            display.style.color = 'var(--text-primary)';
+            display.style.textShadow = 'none';
+        }
+    };
+
     const updateVal = (id, val) => {
         const display = document.getElementById(`val-${id}`);
         if (display) {
             if (id.includes('Diff')) {
-                display.innerText = (parseFloat(val) > 0 ? '+' : '') + Number(val).toLocaleString();
+                updateDiffColor(id, parseFloat(val));
             } else {
                 display.innerText = Number(val).toLocaleString();
             }
@@ -1179,33 +1221,25 @@
         if (id === 'blueGoldDiff') {
             const opposingVal = -parseFloat(val);
             features.redGoldDiff = opposingVal;
-            const rGoldDiff = document.getElementById('redGoldDiff');
-            const rVal = document.getElementById('val-redGoldDiff');
-            if (rGoldDiff) rGoldDiff.value = opposingVal;
-            if (rVal) rVal.innerText = (opposingVal > 0 ? '+' : '') + Number(opposingVal).toLocaleString();
+            updateDiffColor('blueGoldDiff', parseFloat(val));
+            updateDiffColor('redGoldDiff', opposingVal);
         } else if (id === 'redGoldDiff') {
             const opposingVal = -parseFloat(val);
             features.blueGoldDiff = opposingVal;
-            const bGoldDiff = document.getElementById('blueGoldDiff');
-            const bVal = document.getElementById('val-blueGoldDiff');
-            if (bGoldDiff) bGoldDiff.value = opposingVal;
-            if (bVal) bVal.innerText = (opposingVal > 0 ? '+' : '') + Number(opposingVal).toLocaleString();
+            updateDiffColor('blueGoldDiff', opposingVal);
+            updateDiffColor('redGoldDiff', parseFloat(val));
         }
 
         if (id === 'blueExperienceDiff') {
             const opposingVal = -parseFloat(val);
             features.redExperienceDiff = opposingVal;
-            const rExpDiff = document.getElementById('redExperienceDiff');
-            const rVal = document.getElementById('val-redExperienceDiff');
-            if (rExpDiff) rExpDiff.value = opposingVal;
-            if (rVal) rVal.innerText = (opposingVal > 0 ? '+' : '') + Number(opposingVal).toLocaleString();
+            updateDiffColor('blueExperienceDiff', parseFloat(val));
+            updateDiffColor('redExperienceDiff', opposingVal);
         } else if (id === 'redExperienceDiff') {
             const opposingVal = -parseFloat(val);
             features.blueExperienceDiff = opposingVal;
-            const bExpDiff = document.getElementById('blueExperienceDiff');
-            const bVal = document.getElementById('val-blueExperienceDiff');
-            if (bExpDiff) bExpDiff.value = opposingVal;
-            if (bVal) bVal.innerText = (opposingVal > 0 ? '+' : '') + Number(opposingVal).toLocaleString();
+            updateDiffColor('blueExperienceDiff', opposingVal);
+            updateDiffColor('redExperienceDiff', parseFloat(val));
         }
 
         // Derived Sync (derived values computed from base stats)
@@ -1217,15 +1251,8 @@
             features.blueGoldDiff = gDiff;
             features.redGoldDiff = -gDiff;
             
-            const bGoldDiffInput = document.getElementById('blueGoldDiff');
-            const rGoldDiffInput = document.getElementById('redGoldDiff');
-            if (bGoldDiffInput) bGoldDiffInput.value = gDiff;
-            if (rGoldDiffInput) rGoldDiffInput.value = -gDiff;
-            
-            const bGoldDiffVal = document.getElementById('val-blueGoldDiff');
-            const rGoldDiffVal = document.getElementById('val-redGoldDiff');
-            if (bGoldDiffVal) bGoldDiffVal.innerText = (gDiff > 0 ? '+' : '') + Number(gDiff).toLocaleString();
-            if (rGoldDiffVal) rGoldDiffVal.innerText = (-gDiff > 0 ? '+' : '') + Number(-gDiff).toLocaleString();
+            updateDiffColor('blueGoldDiff', gDiff);
+            updateDiffColor('redGoldDiff', -gDiff);
 
             // Gold per min
             features.blueGoldPerMin = bGold / 10.0;
@@ -1249,15 +1276,8 @@
             features.blueExperienceDiff = eDiff;
             features.redExperienceDiff = -eDiff;
             
-            const bExpDiffInput = document.getElementById('blueExperienceDiff');
-            const rExpDiffInput = document.getElementById('redExperienceDiff');
-            if (bExpDiffInput) bExpDiffInput.value = eDiff;
-            if (rExpDiffInput) rExpDiffInput.value = -eDiff;
-            
-            const bExpDiffVal = document.getElementById('val-blueExperienceDiff');
-            const rExpDiffVal = document.getElementById('val-redExperienceDiff');
-            if (bExpDiffVal) bExpDiffVal.innerText = (eDiff > 0 ? '+' : '') + Number(eDiff).toLocaleString();
-            if (rExpDiffVal) rExpDiffVal.innerText = (-eDiff > 0 ? '+' : '') + Number(-eDiff).toLocaleString();
+            updateDiffColor('blueExperienceDiff', eDiff);
+            updateDiffColor('redExperienceDiff', -eDiff);
         }
 
         if (id === 'blueTotalMinionsKilled') {
@@ -1639,7 +1659,7 @@
             if (input) input.value = features[key];
             if (val) {
                 if (key.includes('Diff')) {
-                    val.innerText = (features[key] > 0 ? '+' : '') + Number(features[key]).toLocaleString();
+                    updateDiffColor(key, features[key]);
                 } else {
                     val.innerText = Number(features[key]).toLocaleString();
                 }
