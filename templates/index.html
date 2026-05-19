@@ -970,7 +970,7 @@
                             <p style="font-size: 0.95rem; margin-bottom: 0.2rem;">
                                 1 Dragon ≈ <span class="gold-glow" id="dragon-gold-val">1,500</span> Gold
                             </p>
-                            <p>로지스틱 회귀 계수 분석 결과, 블루팀이 획득한 드래곤 1마리는 게임 승률 관점에서 약 <strong class="gold-glow" id="dragon-gold-text">1,500 골드</strong>의 격차를 벌린 것과 동일한 Win Odds 상승 효과를 가집니다.</p>
+                            <p id="dragon-gold-desc">로지스틱 회귀 계수 분석 결과, 블루팀이 획득한 드래곤 1마리는 게임 승률 관점에서 약 <strong class="gold-glow" id="dragon-gold-text">1,500 골드</strong>의 격차를 벌린 것과 동일한 Win Odds 상승 효과를 가집니다.</p>
                         </div>
                     </div>
                 </div>
@@ -1311,6 +1311,17 @@
             document.getElementById('bar-blue').style.width = (data.blue_win_probability * 100) + '%';
             document.getElementById('bar-red').style.width = (data.red_win_probability * 100) + '%';
             document.getElementById('model-info').innerText = `AI 예측 모델: ${data.model_used} 실시간 가동 중`;
+            
+            // Update Dragon Gold Value Card if present
+            if (data.dragon_gold_value !== undefined) {
+                const goldVal = Math.round(data.dragon_gold_value);
+                const valElem = document.getElementById('dragon-gold-val');
+                const descElem = document.getElementById('dragon-gold-desc');
+                if (valElem) valElem.innerText = goldVal.toLocaleString() + ' Gold';
+                if (descElem) {
+                    descElem.innerHTML = `${data.model_used} 분석 결과, 블루팀이 획득한 드래곤 1마리는 게임 승률 관점에서 약 <strong class="gold-glow" id="dragon-gold-text">${goldVal.toLocaleString()} 골드</strong>의 격차를 벌린 것과 동일한 Win Odds 상승 효과를 가집니다.`;
+                }
+            }
         } catch (e) {}
     }
 

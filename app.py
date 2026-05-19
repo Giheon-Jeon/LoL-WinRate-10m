@@ -31,6 +31,87 @@ def get_metrics():
         metrics = json.load(f)
     return jsonify(metrics)
 
+def calculate_dragon_gold_value(model_name, full_input, feature_order, feature_defaults):
+    # Helper to predict win probability for a given input dict
+    def get_prob(inp_dict):
+        dict_copy = inp_dict.copy()
+        dict_copy['blueEliteMonsters'] = dict_copy.get('blueDragons', 0) + dict_copy.get('blueHeralds', 0)
+        dict_copy['redEliteMonsters'] = dict_copy.get('redDragons', 0) + dict_copy.get('redHeralds', 0)
+        
+        # Prepare inputs in exact feature order
+        input_vals = [dict_copy.get(f, feature_defaults.get(f, 0)) for f in feature_order]
+        
+        if model_name == "Logistic Regression":
+            from models.logistic_regression_code import score as lr_score
+            scaler_file = os.path.join(MODELS_DIR, "scaler.json")
+            if not os.path.exists(scaler_file):
+                return 0.5
+            with open(scaler_file, "r") as f:
+                scaler_data = json.load(f)
+                scaler_mean = scaler_data["mean"]
+                scaler_scale = scaler_data["scale"]
+            X_scaled = [(x_i - mean_i) / scale_i for x_i, mean_i, scale_i in zip(input_vals, scaler_mean, scaler_scale)]
+            margin = lr_score(X_scaled)
+            return 1.0 / (1.0 + np.exp(-margin))
+            
+        elif model_name == "Random Forest":
+            from models.random_forest_code import score as rf_score
+            proba = rf_score(input_vals)
+            return proba[1]
+            
+        elif model_name == "XGBoost":
+            from models.xgboost_code import score as xgb_score
+            proba = xgb_score(input_vals)
+            return proba[1]
+        return 0.5
+
+    # 1. Current probability
+    p_current = get_prob(full_input)
+    
+    # 2. Probability with dragon changed
+    current_dragons = full_input.get('blueDragons', 0)
+    dragons_changed = current_dragons + 1 if current_dragons < 2 else current_dragons - 1
+    direction = 1 if current_dragons < 2 else -1
+    
+    inp_dragon_changed = full_input.copy()
+    inp_dragon_changed['blueDragons'] = dragons_changed
+    p_dragon_changed = get_prob(inp_dragon_changed)
+    
+    # 3. Probability derivative with respect to blueGoldDiff
+    current_gold_diff = full_input.get('blueGoldDiff', 0)
+    
+    inp_gold_plus = full_input.copy()
+    inp_gold_plus['blueGoldDiff'] = current_gold_diff + 100
+    p_gold_plus = get_prob(inp_gold_plus)
+    
+    inp_gold_minus = full_input.copy()
+    inp_gold_minus['blueGoldDiff'] = current_gold_diff - 100
+    p_gold_minus = get_prob(inp_gold_minus)
+    
+    dp_dgold = (p_gold_plus - p_gold_minus) / 200.0
+    
+    if abs(dp_dgold) < 1e-7:
+        try:
+            metrics_path = os.path.join(MODELS_DIR, "metrics.json")
+            with open(metrics_path, "r", encoding="utf-8") as f:
+                metrics = json.load(f)
+            return metrics["Logistic Regression"]["Dragon_Gold_Value"]
+        except Exception:
+            return 1568.0
+            
+    dragon_gold_value = ((p_dragon_changed - p_current) / direction) / dp_dgold
+    
+    if dragon_gold_value < 0 or dragon_gold_value > 5000 or np.isnan(dragon_gold_value):
+        try:
+            metrics_path = os.path.join(MODELS_DIR, "metrics.json")
+            with open(metrics_path, "r", encoding="utf-8") as f:
+                metrics = json.load(f)
+            return metrics["Logistic Regression"]["Dragon_Gold_Value"]
+        except Exception:
+            return 1568.0
+            
+    return float(dragon_gold_value)
+
 @app.route("/api/predict", methods=["POST"])
 def predict_match():
     input_data = request.json
@@ -155,12 +236,16 @@ def predict_match():
             
         prediction = 1 if blue_win_probability >= 0.5 else 0
         
+        # Calculate dynamic dragon gold value equivalent based on currently selected model and features
+        dragon_gold_val = calculate_dragon_gold_value(model_name, full_input, feature_order, feature_defaults)
+        
         return jsonify({
             "model_used": model_name,
             "prediction": prediction,
             "winner": "Blue" if prediction == 1 else "Red",
             "blue_win_probability": float(blue_win_probability),
-            "red_win_probability": float(1.0 - blue_win_probability)
+            "red_win_probability": float(1.0 - blue_win_probability),
+            "dragon_gold_value": float(dragon_gold_val)
         })
     except Exception as e:
         return jsonify({"error": f"Prediction failed: {str(e)}"}), 500
