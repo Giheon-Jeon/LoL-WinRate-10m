@@ -963,12 +963,12 @@
                     </div>
                     
                     <!-- 드래곤 가치 골드 환산 카드 -->
-                    <div class="dragon-gold-card">
+                    <div class="dragon-gold-card" id="dragon-gold-card-container" style="display: none;">
                         <div class="dragon-gold-icon">🐉</div>
                         <div class="dragon-gold-details">
-                            <h4>드래곤 1마리의 골드 가치 환산</h4>
+                            <h4 id="dragon-gold-title">드래곤 골드 가치 환산</h4>
                             <p style="font-size: 0.95rem; margin-bottom: 0.2rem;">
-                                1 Dragon ≈ <span class="gold-glow" id="dragon-gold-val">1,500</span> Gold
+                                <span id="dragon-gold-val-label">1 Dragon</span> ≈ <span class="gold-glow" id="dragon-gold-val">1,500</span> Gold
                             </p>
                             <p id="dragon-gold-desc">로지스틱 회귀 계수 분석 결과, 블루팀이 획득한 드래곤 1마리는 게임 승률 관점에서 약 <strong class="gold-glow" id="dragon-gold-text">1,500 골드</strong>의 격차를 벌린 것과 동일한 Win Odds 상승 효과를 가집니다.</p>
                         </div>
@@ -1312,14 +1312,35 @@
             document.getElementById('bar-red').style.width = (data.red_win_probability * 100) + '%';
             document.getElementById('model-info').innerText = `AI 예측 모델: ${data.model_used} 실시간 가동 중`;
             
-            // Update Dragon Gold Value Card if present
-            if (data.dragon_gold_value !== undefined) {
-                const goldVal = Math.round(data.dragon_gold_value);
-                const valElem = document.getElementById('dragon-gold-val');
-                const descElem = document.getElementById('dragon-gold-desc');
-                if (valElem) valElem.innerText = goldVal.toLocaleString() + ' Gold';
-                if (descElem) {
-                    descElem.innerHTML = `${data.model_used} 분석 결과, 블루팀이 획득한 드래곤 1마리는 게임 승률 관점에서 약 <strong class="gold-glow" id="dragon-gold-text">${goldVal.toLocaleString()} 골드</strong>의 격차를 벌린 것과 동일한 Win Odds 상승 효과를 가집니다.`;
+            // Update Dragon Gold Value Card dynamically based on the difference
+            const bDragons = features.blueDragons || 0;
+            const rDragons = features.redDragons || 0;
+            const cardContainer = document.getElementById('dragon-gold-card-container');
+            
+            if (bDragons === rDragons) {
+                if (cardContainer) cardContainer.style.display = 'none';
+            } else {
+                if (cardContainer) cardContainer.style.display = 'flex';
+                
+                const leadingTeam = bDragons > rDragons ? '블루팀' : '레드팀';
+                const leadingDragons = bDragons > rDragons ? bDragons : rDragons;
+                
+                if (data.dragon_gold_value !== undefined) {
+                    const goldVal = Math.round(data.dragon_gold_value);
+                    const totalGoldVal = Math.round(data.dragon_gold_value * leadingDragons);
+                    
+                    const titleElem = document.getElementById('dragon-gold-title');
+                    const labelElem = document.getElementById('dragon-gold-val-label');
+                    const valElem = document.getElementById('dragon-gold-val');
+                    const descElem = document.getElementById('dragon-gold-desc');
+                    
+                    if (titleElem) titleElem.innerText = `${leadingTeam} 드래곤 가치 환산`;
+                    if (labelElem) labelElem.innerText = `${leadingDragons} Dragon${leadingDragons > 1 ? 's' : ''}`;
+                    if (valElem) valElem.innerText = totalGoldVal.toLocaleString() + ' Gold';
+                    
+                    if (descElem) {
+                        descElem.innerHTML = `${data.model_used} 분석 결과, ${leadingTeam}이 획득한 드래곤 ${leadingDragons}마리는 게임 승률 관점에서 약 <strong class="gold-glow" id="dragon-gold-text">${totalGoldVal.toLocaleString()} 골드</strong>(1마리당 약 ${goldVal.toLocaleString()} 골드)의 격차를 벌린 것과 동일한 Win Odds 상승 효과를 가집니다.`;
+                    }
                 }
             }
         } catch (e) {}
