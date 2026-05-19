@@ -723,16 +723,6 @@
                     <div class="stat-label"><span>정글 미니언 처치</span><span id="val-blueTotalJungleMinionsKilled">0</span></div>
                     <input type="range" id="blueTotalJungleMinionsKilled" min="0" max="100" value="0" oninput="updateVal('blueTotalJungleMinionsKilled', this.value)">
                 </div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
-                    <div class="stat-group">
-                        <div class="stat-label"><span>분당 CS</span><span id="val-blueCSPerMin">0.0</span></div>
-                        <input type="range" id="blueCSPerMin" min="0" max="40" step="0.1" value="0" oninput="updateVal('blueCSPerMin', this.value)">
-                    </div>
-                    <div class="stat-group">
-                        <div class="stat-label"><span>분당 골드</span><span id="val-blueGoldPerMin">0</span></div>
-                        <input type="range" id="blueGoldPerMin" min="500" max="3000" step="10" value="0" oninput="updateVal('blueGoldPerMin', this.value)">
-                    </div>
-                </div>
             </div>
 
             <div class="stat-section">
@@ -810,16 +800,6 @@
                     <div class="stat-label"><span>정글 미니언 처치</span><span id="val-redTotalJungleMinionsKilled">0</span></div>
                     <input type="range" id="redTotalJungleMinionsKilled" min="0" max="100" value="0" oninput="updateVal('redTotalJungleMinionsKilled', this.value)">
                 </div>
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
-                    <div class="stat-group">
-                        <div class="stat-label"><span>분당 CS</span><span id="val-redCSPerMin">0.0</span></div>
-                        <input type="range" id="redCSPerMin" min="0" max="40" step="0.1" value="0" oninput="updateVal('redCSPerMin', this.value)">
-                    </div>
-                    <div class="stat-group">
-                        <div class="stat-label"><span>분당 골드</span><span id="val-redGoldPerMin">0</span></div>
-                        <input type="range" id="redGoldPerMin" min="500" max="3000" step="10" value="0" oninput="updateVal('redGoldPerMin', this.value)">
-                    </div>
-                </div>
             </div>
 
             <div class="stat-section">
@@ -856,14 +836,14 @@
         </div>
     </div>
 
-    <!-- Team Gaps (Read-Only) -->
+    <!-- Team Gaps & Production (Read-Only) -->
     <div class="gaps-section-card" style="margin-top: 2rem; background: var(--bg-card); backdrop-filter: blur(12px); border: 1px solid var(--border-glass); border-radius: 20px; padding: 2rem; box-shadow: var(--shadow-glow); position: relative; overflow: hidden;">
-        <h3 style="color: var(--gold-bright); margin-bottom: 1.5rem; font-size: 1.1rem; border-left: 4px solid var(--gold-main); padding-left: 0.6rem; font-family: 'Outfit', sans-serif;">⚖️ 양 팀 실시간 지표 격차 분석</h3>
+        <h3 style="color: var(--gold-bright); margin-bottom: 1.5rem; font-size: 1.1rem; border-left: 4px solid var(--gold-main); padding-left: 0.6rem; font-family: 'Outfit', sans-serif;">⚖️ 양 팀 실시간 분석 지표 (격차 및 분당 생산량)</h3>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
-            <!-- Blue Team Gaps (Relative to Red Team) -->
+            <!-- Blue Team Gaps & Stats -->
             <div style="padding: 1.2rem; background: rgba(31, 142, 206, 0.03); border-radius: 12px; border-left: 4px solid var(--blue-team); border-right: 1px solid rgba(31, 142, 206, 0.1); border-top: 1px solid rgba(31, 142, 206, 0.1); border-bottom: 1px solid rgba(31, 142, 206, 0.1);">
                 <h4 style="color: var(--blue-team); font-size: 0.95rem; margin-bottom: 1.2rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
-                    <span style="font-size: 1.1rem;">🔵</span> 블루팀 기준 격차 (vs 레드팀)
+                    <span style="font-size: 1.1rem;">🔵</span> 블루팀 분석 지표 (vs 레드팀)
                 </h4>
                 <div style="display: flex; flex-direction: column; gap: 1rem;">
                     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.7rem;">
@@ -874,13 +854,21 @@
                         <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 500;">경험치 격차 (Exp Diff)</span>
                         <span id="val-blueExperienceDiff" style="font-family: 'Outfit', sans-serif; font-size: 1.3rem; font-weight: 800; color: var(--text-primary); transition: all 0.3s ease;">0</span>
                     </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.7rem;">
+                        <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 500;">분당 CS (CS Per Min)</span>
+                        <span id="val-blueCSPerMin" style="font-family: 'Outfit', sans-serif; font-size: 1.3rem; font-weight: 800; color: var(--gold-bright); transition: all 0.3s ease;">0.0</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.7rem;">
+                        <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 500;">분당 골드 (Gold Per Min)</span>
+                        <span id="val-blueGoldPerMin" style="font-family: 'Outfit', sans-serif; font-size: 1.3rem; font-weight: 800; color: var(--gold-bright); transition: all 0.3s ease;">0</span>
+                    </div>
                 </div>
             </div>
             
-            <!-- Red Team Gaps (Relative to Blue Team) -->
+            <!-- Red Team Gaps & Stats -->
             <div style="padding: 1.2rem; background: rgba(232, 64, 87, 0.03); border-radius: 12px; border-left: 4px solid var(--red-team); border-right: 1px solid rgba(232, 64, 87, 0.1); border-top: 1px solid rgba(232, 64, 87, 0.1); border-bottom: 1px solid rgba(232, 64, 87, 0.1);">
                 <h4 style="color: var(--red-team); font-size: 0.95rem; margin-bottom: 1.2rem; font-weight: 700; display: flex; align-items: center; gap: 0.5rem;">
-                    <span style="font-size: 1.1rem;">🔴</span> 레드팀 기준 격차 (vs 블루팀)
+                    <span style="font-size: 1.1rem;">🔴</span> 레드팀 분석 지표 (vs 블루팀)
                 </h4>
                 <div style="display: flex; flex-direction: column; gap: 1rem;">
                     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.7rem;">
@@ -890,6 +878,14 @@
                     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.7rem;">
                         <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 500;">경험치 격차 (Exp Diff)</span>
                         <span id="val-redExperienceDiff" style="font-family: 'Outfit', sans-serif; font-size: 1.3rem; font-weight: 800; color: var(--text-primary); transition: all 0.3s ease;">0</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.7rem;">
+                        <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 500;">분당 CS (CS Per Min)</span>
+                        <span id="val-redCSPerMin" style="font-family: 'Outfit', sans-serif; font-size: 1.3rem; font-weight: 800; color: var(--gold-bright); transition: all 0.3s ease;">0.0</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.7rem;">
+                        <span style="font-size: 0.85rem; color: var(--text-secondary); font-weight: 500;">분당 골드 (Gold Per Min)</span>
+                        <span id="val-redGoldPerMin" style="font-family: 'Outfit', sans-serif; font-size: 1.3rem; font-weight: 800; color: var(--gold-bright); transition: all 0.3s ease;">0</span>
                     </div>
                 </div>
             </div>
@@ -1182,6 +1178,8 @@
         if (display) {
             if (id.includes('Diff')) {
                 updateDiffColor(id, parseFloat(val));
+            } else if (id.includes('CSPerMin')) {
+                display.innerText = Number(val).toFixed(1);
             } else {
                 display.innerText = Number(val).toLocaleString();
             }
@@ -1660,6 +1658,8 @@
             if (val) {
                 if (key.includes('Diff')) {
                     updateDiffColor(key, features[key]);
+                } else if (key.includes('CSPerMin')) {
+                    val.innerText = Number(features[key]).toFixed(1);
                 } else {
                     val.innerText = Number(features[key]).toLocaleString();
                 }
