@@ -13,21 +13,40 @@
 ---
 
 ## 📌 목차
-- [✨ 주요 기능](#✨-주요-기능)
-- [🤖 머신러닝 파이프라인 구성 요약](#-머신러닝-파이프라인-구성-요약)
-- [🛠 기술 스택 및 선정 이유](#-기술-스택-및-선정-이유)
-- [🏗 아키텍처 및 폴더 구조](#-아키텍처-및-폴더-구조)
-- [🤝 협업 및 자동화 규칙](#-협업-및-자동화-규칙)
-- [📈 데이터 전처리 및 모델 학습 파이프라인](#-데이터-전처리-및-모델-학습-파이프라인)
+<details>
+  <summary>클릭하여 목차 열기/닫기</summary>
+  
+  - [✨ 주요 기능](#-주요-기능)
+  - [🤖 머신러닝 파이프라인 구성 요약](#-머신러닝-파이프라인-구성-요약)
+  - [🛠 기술 스택 및 선정 이유](#-기술-스택-및-선정-이유)
+  - [🏗 아키텍처 및 폴더 구조 (상세)](#-아키텍처-및-폴더-구조-상세)
+  - [🤝 협업 및 자동화 규칙](#-협업-및-자동화-규칙)
+  - [📈 데이터 전처리 및 모델 학습 파이프라인](#-데이터-전처리-및-모델-학습-파이프라인)
+</details>
 
 ---
 
 ## ✨ 주요 기능
-1. **Hextech UI/UX**: 리그 오브 레전드 마법공학 테마를 적용한 프리미엄 웹 인터페이스 및 실시간 인터랙티브 모델 분석 대시보드
-2. **3단계 머신러닝 다변화 엔진**: 베이스라인(로지스틱 회귀), 비교(랜덤 포레스트), 최적화(XGBoost GridSearch)로 이어지는 정밀 성능 검증 체계
-3. **가중치 계수 기반 드래곤 골드 가치 환산**: 로지스틱 회귀의 비표준화 계수 비율을 분석하여 **"드래곤 1마리 ≈ 1,568 골드"**의 실용적인 전략 지표 동적 도출
-4. **인터랙티브 시각화 대시보드**: 각 모델의 **혼동 행렬(Confusion Matrix) TP/TN/FP/FN** 시각화, 양수/음수 계수 그래프, 그리고 중요 피처 차트(Chart.js) 탑재
-5. **Gemini 비전 스캔**: Gemini 2.0 Flash AI를 활용하여 인게임 스코어보드 스크린샷에서 10분 지표 자동 추출 및 입력 폼 자동 매핑
+<details open>
+  <summary><b>1. Hextech UI/UX 대시보드</b></summary>
+  리그 오브 레전드의 마법공학 테마를 살린 프리미엄 웹 인터페이스입니다. 실시간 인터랙티브 모델 분석 대시보드를 제공하며 매끄러운 사용자 경험을 선사합니다.
+</details>
+<details open>
+  <summary><b>2. 3단계 머신러닝 다변화 엔진</b></summary>
+  베이스라인(로지스틱 회귀), 비교(랜덤 포레스트), 최적화(XGBoost GridSearch) 모델들을 활용해 정밀한 성능 검증 체계를 운영합니다.
+</details>
+<details open>
+  <summary><b>3. 데이터 기반 인사이트: 드래곤 골드 가치 환산</b></summary>
+  로지스틱 회귀 모델의 비표준화 계수 비율을 분석해 <b>"드래곤 1마리 ≈ 1,568 골드"</b>라는 실용적이고 직관적인 전략 지표를 도출합니다.
+</details>
+<details open>
+  <summary><b>4. 인터랙티브 시각화 차트</b></summary>
+  Chart.js를 활용하여 각 모델의 <b>혼동 행렬(Confusion Matrix) TP/TN/FP/FN</b>, 모델별 중요 피처 분포 및 양수/음수 계수 그래프를 다이내믹하게 렌더링합니다.
+</details>
+<details open>
+  <summary><b>5. Gemini 비전 스캔 연동</b></summary>
+  Google Gemini 2.0 Flash AI 비전 인식 기능을 활용하여 인게임 스크린샷에서 10분 지표를 자동 추출하고 입력 폼에 즉시 매핑합니다.
+</details>
 
 ---
 
@@ -46,56 +65,81 @@
 ## 🛠 기술 스택 및 선정 이유
 
 ### Frontend / Backend
-![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![Flask](https://img.shields.io/badge/Flask-000000?style=for-the-badge&logo=flask&logoColor=white)
-![NumPy](https://img.shields.io/badge/NumPy-013243?style=for-the-badge&logo=numpy&logoColor=white)
+<p>
+  <img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white" />
+  <img src="https://img.shields.io/badge/Flask-000000?style=for-the-badge&logo=flask&logoColor=white" />
+  <img src="https://img.shields.io/badge/NumPy-013243?style=for-the-badge&logo=numpy&logoColor=white" />
+</p>
 
-* **Python**: 강력한 데이터 분석 및 머신러닝 라이브러리 생태계를 통합하기 위한 핵심 언어
-* **Flask**: API 서빙과 정적 템플릿 렌더링을 매우 가볍고 확장성 있게 핸들링하는 마이크로 프레임워크
-* **NumPy**: 모델 입력 데이터의 실시간 변형 및 백엔드 스케일링 전처리를 위한 고성능 행렬 연산 라이브러리
+* **Python**: 강력한 데이터 분석 및 머신러닝 생태계를 활용할 수 있는 핵심 언어
+* **Flask**: API 서빙 및 정적 템플릿 렌더링에 적합한 가볍고 유연한 마이크로 프레임워크
+* **NumPy**: 입력 데이터의 실시간 변형, 배열 관리 및 백엔드 고성능 행렬 연산 처리
 
 ### ML 및 시각화
-![Scikit-Learn](https://img.shields.io/badge/scikit--learn-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white)
-![XGBoost](https://img.shields.io/badge/XGBoost-111111?style=for-the-badge&logo=xgboost&logoColor=white)
-![Chart.js](https://img.shields.io/badge/Chart.js-FF6384?style=for-the-badge&logo=chartdotjs&logoColor=white)
-![Google Gemini](https://img.shields.io/badge/Google_Gemini-8E75B2?style=for-the-badge&logo=google-gemini&logoColor=white)
+<p>
+  <img src="https://img.shields.io/badge/scikit--learn-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white" />
+  <img src="https://img.shields.io/badge/XGBoost-111111?style=for-the-badge&logo=xgboost&logoColor=white" />
+  <img src="https://img.shields.io/badge/Chart.js-FF6384?style=for-the-badge&logo=chartdotjs&logoColor=white" />
+  <img src="https://img.shields.io/badge/Google_Gemini-8E75B2?style=for-the-badge&logo=google-gemini&logoColor=white" />
+</p>
 
-* **Scikit-learn**: 표준화 스케일링(StandardScaler), 로지스틱 회귀, 랜덤 포레스트, 그리고 GridSearchCV 하이퍼파라미터 교차 검증의 뼈대 구성
-* **XGBoost**: 정형 데이터 모델링의 압도적인 예측력을 자랑하는 부스팅 모델 기법으로, MoE 대비 뛰어난 실효적 지표 예측력 발휘
-* **Chart.js**: 브라우저 단에서 다이내믹하게 계수 부호 및 중요 지표 순위를 렌더링하기 위한 경량 고해상도 시각화 차트 라이브러리
-* **Google Gemini (2.0 Flash)**: 최신 비전 인식을 기반으로 게임 스크린샷 내 수치 정보를 100% JSON으로 파싱하는 인텔리전트 보조 도구
+* **Scikit-learn**: 데이터 표준화(StandardScaler), 로지스틱 회귀, 랜덤 포레스트 및 GridSearchCV 기반 하이퍼파라미터 튜닝 지원
+* **XGBoost**: 뛰어난 정형 데이터 예측력을 제공하는 부스팅 알고리즘으로 프로젝트 최고 성능 달성
+* **Chart.js**: 브라우저상에서 계수 분포, 중요도 순위, 혼동 행렬 등을 애니메이션과 함께 렌더링하는 경량 시각화 도구
+* **Google Gemini (2.0 Flash)**: 멀티모달 비전 인식을 통해 복잡한 게임 스크린샷 수치를 JSON 포맷으로 자동 변환
 
 ---
 
-## 🏗 아키텍처 및 폴더 구조
+## 🏗 아키텍처 및 폴더 구조 (상세)
 
-정제된 기계학습 바이너리(`.joblib`) 로딩 및 웹 API 구조의 미니멀 아키텍처 채택
+각 폴더와 파일의 역할(설명)을 토글로 구성하여 한눈에 파악할 수 있도록 작성되었습니다.
+
+<details>
+  <summary>📂 <b>전체 디렉터리 트리 보기</b></summary>
 
 ```text
 .
-├── 📁 models/                  # 학습 완료된 가중치 바이너리 및 성능 메타 데이터
-│   ├── feature_names.json      # 학습에 최종 사용된 36개 피처 순서 (데이터 일관성 보장)
-│   ├── logistic_regression.joblib  # 로지스틱 회귀 모델 가중치
-│   ├── random_forest.joblib    # 랜덤 포레스트 모델 가중치
-│   ├── xgboost.joblib          # GridSearchCV 튜닝이 완료된 최적 XGBoost 모델
-│   ├── scaler.joblib           # 로지스틱 회귀 전용 표준화(StandardScaler) 스케일러
-│   └── metrics.json            # 각 모델별 성능 지표 (ACC, F1, AUC, Confusion Matrix, 계수)
-├── 📁 templates/               # 단일 페이지 애플리케이션(SPA) HTML 템플릿
-│   └── index.html              # Hextech 프리미엄 대시보드 UI 및 차트 상호작용 로직
-├── 📄 app.py                   # Flask 메인 엔드포인트 서버 및 피처 전처리 스케일링 서빙 API
-├── 📄 train.py                 # 데이터 로딩, 다중공선성 제거, 스케일링 분기 및 3대 모델 정밀 학습 스크립트
-├── 📄 requirements.txt         # Vercel 배포를 위한 최소 패키지 구성 (Scikit-learn 및 XGBoost 포함)
-├── 📄 .vercelignore            # 불필요한 캐시 및 가상환경 배포 제외 설정
-└── README.md                   # 프로젝트 통합 설명 문서
+├── 📁 backend/                 # 백엔드 스크립트 관련 디렉터리
+├── 📁 models/                  # 학습 완료된 모델 파라미터(가중치) 및 메타 데이터 저장소
+│   ├── 📄 feature_names.json   # 예측 시 사용되는 36개 피처의 순서 정보 보장용
+│   ├── 📄 logistic_regression.joblib  # 로지스틱 회귀 학습 완료 바이너리 가중치 파일
+│   ├── 📄 logistic_regression_code.py # 로지스틱 회귀 모델 생성/학습 코드가 독립된 스크립트
+│   ├── 📄 metrics.json         # 각 모델의 성능 평가지표 (Accuracy, F1, ROC-AUC, CM, 계수 등) 기록
+│   ├── 📄 random_forest.joblib # 랜덤 포레스트 앙상블 학습 완료 바이너리 파일
+│   ├── 📄 random_forest_code.py# 랜덤 포레스트 모델 생성/학습 스크립트
+│   ├── 📄 xgboost.joblib       # XGBoost (GridSearchCV 최적화 적용) 바이너리 가중치
+│   ├── 📄 xgboost_code.py      # XGBoost 학습 설정 스크립트
+│   ├── 📄 scaler.joblib        # 입력 데이터 스케일링용 피클 (StandardScaler)
+│   └── 📄 scaler.json          # 스케일링 평균/분산 정보의 JSON 버전 백업
+├── 📁 static/                  # 정적 파일(이미지, CSS 등)을 호스팅하기 위한 폴더
+├── 📁 templates/               # 프론트엔드 HTML 렌더링용 뷰(View) 템플릿
+│   └── 📄 index.html           # 대시보드 UI를 구성하는 마법공학 테마 SPA (Single Page Application)
+├── 📄 .gitignore               # Git 버전 관리에서 제외할 파일 및 폴더 (가상환경, 캐시 등)
+├── 📄 .vercelignore            # Vercel 클라우드 배포 시 번들 용량 최소화를 위해 무시할 파일 설정
+├── 📄 LICENSE                  # 프로젝트 라이선스 공시
+├── 📄 README.md                # 전체 프로젝트 소개 및 가이드 문서 (본 문서)
+├── 📄 app.py                   # Flask 메인 애플리케이션 (라우팅, API 서빙, 모델 추론 통합 뷰)
+├── 📄 high_diamond_ranked_10min.csv # 모델 학습 원천 데이터셋 (Kaggle 출처, 10분 구간 통계)
+├── 📄 requirements.txt         # 파이썬 패키지 의존성 목록 명세서 (Vercel 배포용)
+├── 📄 train.py                 # 전처리 및 모델 학습 파이프라인의 메인 실행 스크립트
+└── 📄 vercel.json              # Vercel 환경에서 Flask(Python) 서버리스 함수를 띄우기 위한 설정 파일
 ```
+</details>
+
+### 주요 파일 역할 세부 설명
+
+* **`app.py`**: 서버의 심장부로 클라이언트와의 HTTP 통신을 담당합니다. `/api/predict` 등의 엔드포인트를 열어 전처리, 스케일링, 모델 추론 결과를 응답으로 반환합니다.
+* **`train.py`**: 다중공선성(Multi-collinearity)이 우려되는 피처를 제거하고, 모델 성격에 맞는 스케일링 분기 처리 및 하이퍼파라미터 튜닝을 거쳐 최종 `*.joblib` 파일들을 덤프합니다.
+* **`templates/index.html`**: UI/UX 디자인이 집약된 클라이언트 파일입니다. 차트 렌더링(Chart.js), 비동기 페칭, 스크린샷 업로드 파싱 등 모든 브라우저 상호작용이 여기서 이루어집니다.
+* **`vercel.json` & `.vercelignore`**: PaaS 플랫폼(Vercel)에 배포할 때, 정적 프론트엔드 호스팅이 아닌 Python Serverless Function으로 래핑(Wrapping)하기 위한 핵심 인프라 파일입니다. 번들 용량 한계(최대 250MB)를 피하기 위한 배포 효율화가 적용되어 있습니다.
 
 ---
 
 ## 🤝 협업 및 자동화 규칙
 
-* **Git Flow**: `main` 브랜치를 서비스 배포 브랜치로 관리하며 기능 단위 개발 및 반영
-* **Commit Convention**: 이모지를 포함한 커밋 메시지 규칙 준수 (`✨ Feat`, `🐛 Fix`, `⚡️ Perf`, `clean`, `build`)
-* **Bundle Optimization**: 사용하지 않는 레거시 MoE Python 생성 코드들(총 13MB 대용량 파일군)을 전면 제거하여 Vercel 배포 시 서버리스 콜드스타트 및 번들 패키징 크기 대폭 축소
+* **Git Flow 전략**: `main` 브랜치를 기준으로 프로덕션 배포를 관리하며 기능 단위 패치 및 핫픽스 처리
+* **Commit Convention**: 협업 커밋 시 이모지 컨벤션(`✨ Feat`, `🐛 Fix`, `⚡️ Perf`, `♻️ Refactor`)을 준수하여 가독성 강화
+* **Bundle Optimization (최적화)**: Vercel 서버리스 배포 제한 용량(250MB)에 맞추기 위해 사용하지 않는 대용량 코드나 불필요한 모델 이력을 클린업하여 콜드스타트 지연 현상 및 배포 실패율 개선
 
 ---
 
@@ -126,5 +170,9 @@ graph TD
     L --> M[models/metrics.json 저장 & joblib 모델 덤프]
 ```
 
-1. **다중공선성 원천 배제**: 블루팀의 골드 차이와 경험치 차이는 레드팀의 값과 완벽히 대칭(부호만 반대)이므로 다중공선성으로 인한 회귀 모델의 불안정성을 완벽히 제거하기 위해 `redGoldDiff`, `redExperienceDiff`를 전처리 단계에서 전면 탈락시켰습니다.
-2. **스케일링 정밀 분기**: 경사하강법 기반이자 계수 해석이 중요한 로지스틱 회귀에는 표준화(`StandardScaler`)를 적용하여 정밀 계수를 유도한 반면, 변수 분할 기준을 따르는 트리 기반 모델(RF, XGBoost)은 정보 왜곡을 막기 위해 원래의 비스케일링 원본 데이터를 공급하여 학습 정확도를 극대화했습니다.
+<details open>
+  <summary><b>🔥 데이터 전처리 핵심 포인트</b></summary>
+  
+  1. **다중공선성 원천 배제**: 블루팀의 골드 차이와 경험치 차이는 레드팀의 값과 완벽히 대칭(부호만 반대)이므로, 다중공선성(Multicollinearity)으로 인한 회귀 모델의 불안정성을 완벽히 제거하기 위해 `redGoldDiff`, `redExperienceDiff`를 전처리 단계에서 전면 탈락시켰습니다.
+  2. **스케일링 정밀 분기**: 경사하강법 기반이자 계수 해석이 중요한 로지스틱 회귀에는 표준화(`StandardScaler`)를 적용하여 정밀 계수를 유도한 반면, 변수 분할 기준을 따르는 트리 기반 모델(RF, XGBoost)은 정보 왜곡을 막기 위해 원래의 비스케일링 원본 데이터를 공급하여 학습 정확도를 극대화했습니다.
+</details>
