@@ -597,6 +597,72 @@
             .scanner-card { height: 180px; }
             .tab-grid { grid-template-columns: 1fr; }
         }
+
+        /* Champion Draft Board Styles */
+        .champ-slot {
+            aspect-ratio: 1;
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid var(--border-glass);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+            position: relative;
+        }
+        .champ-slot:hover {
+            border-color: var(--gold-main);
+            box-shadow: 0 0 12px rgba(200, 170, 110, 0.25);
+            transform: translateY(-2px);
+        }
+        .champ-slot.blue-active {
+            border-color: var(--blue-team);
+            box-shadow: 0 0 8px rgba(31, 142, 206, 0.2);
+        }
+        .champ-slot.red-active {
+            border-color: var(--red-team);
+            box-shadow: 0 0 8px rgba(232, 64, 87, 0.2);
+        }
+        .champ-slot img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .champ-slot .slot-placeholder {
+            font-size: 1.6rem;
+            color: var(--text-secondary);
+            opacity: 0.6;
+            transition: opacity 0.2s;
+        }
+        .champ-slot:hover .slot-placeholder {
+            opacity: 1;
+        }
+        .champ-slot .slot-label {
+            font-size: 0.6rem;
+            color: var(--text-secondary);
+            margin-top: 0.2rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .champ-slot .slot-name-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(10, 15, 23, 0.85);
+            color: var(--gold-bright);
+            font-size: 0.65rem;
+            text-align: center;
+            padding: 0.2rem 0;
+            font-weight: 600;
+            border-top: 1px solid var(--border-glass);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
     </style>
 </head>
 <body>
@@ -677,6 +743,72 @@
     <div class="fb-container">
         <div class="fb-btn active" id="fb-blue" onclick="setFB('blue')">🔵 블루팀 퍼스트 블러드 획득</div>
         <div class="fb-btn" id="fb-red" onclick="setFB('red')">🔴 레드팀 퍼스트 블러드 획득</div>
+    </div>
+
+    <!-- 🛡️ 챔피언 조합 선택 (Draft Board) -->
+    <div class="draft-board-card" style="margin-bottom: 2rem; background: var(--bg-card); backdrop-filter: blur(12px); border: 1px solid var(--border-glass); border-radius: 20px; padding: 2rem; box-shadow: var(--shadow-glow); position: relative;">
+        <h3 style="color: var(--gold-bright); margin-bottom: 1.5rem; font-size: 1.1rem; border-left: 4px solid var(--gold-main); padding-left: 0.6rem; font-family: 'Outfit', sans-serif;">🛡️ 챔피언 밴픽 조합 설정</h3>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+            <!-- Blue Team Draft -->
+            <div style="display: flex; flex-direction: column; gap: 0.8rem;">
+                <h4 style="color: var(--blue-team); font-size: 0.95rem; font-weight: 700; border-bottom: 1px solid rgba(31, 142, 206, 0.15); padding-bottom: 0.5rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between;">
+                    <span>🔵 블루팀 챔피언 조합</span>
+                    <span id="blue-draft-score" style="color: var(--gold-main); font-family: 'Outfit'; font-weight: 800;">조합 점수: 50.0%</span>
+                </h4>
+                <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem;" id="blue-slots">
+                    <!-- Loaded dynamically -->
+                </div>
+            </div>
+            
+            <!-- Red Team Draft -->
+            <div style="display: flex; flex-direction: column; gap: 0.8rem;">
+                <h4 style="color: var(--red-team); font-size: 0.95rem; font-weight: 700; border-bottom: 1px solid rgba(232, 64, 87, 0.15); padding-bottom: 0.5rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between;">
+                    <span>🔴 레드팀 챔피언 조합</span>
+                    <span id="red-draft-score" style="color: var(--gold-main); font-family: 'Outfit'; font-weight: 800;">조합 점수: 50.0%</span>
+                </h4>
+                <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem;" id="red-slots">
+                    <!-- Loaded dynamically -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- 조합 시너지 & 상성 분석 패널 -->
+        <div id="composition-analysis-panel" style="margin-top: 1.5rem; border-top: 1px solid var(--border-glass); padding-top: 1.5rem; display: none; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+            <!-- Blue Team Synergies -->
+            <div style="background: rgba(31, 142, 206, 0.02); border: 1px solid rgba(31, 142, 206, 0.05); border-radius: 12px; padding: 1rem;">
+                <h5 style="color: var(--blue-team); font-size: 0.8rem; margin-bottom: 0.5rem; font-weight: 600;">🔵 블루팀 시너지 효과</h5>
+                <ul id="blue-synergies-list" style="list-style: none; font-size: 0.75rem; color: var(--text-secondary); display: flex; flex-direction: column; gap: 0.3rem;">
+                    <!-- Dynamically populated -->
+                </ul>
+            </div>
+            <!-- Red Team Synergies & Counter-Picks -->
+            <div style="background: rgba(232, 64, 87, 0.02); border: 1px solid rgba(232, 64, 87, 0.05); border-radius: 12px; padding: 1rem;">
+                <h5 style="color: var(--red-team); font-size: 0.8rem; margin-bottom: 0.5rem; font-weight: 600;">🔴 레드팀 시너지 및 상성 카운터</h5>
+                <ul id="red-synergies-list" style="list-style: none; font-size: 0.75rem; color: var(--text-secondary); display: flex; flex-direction: column; gap: 0.3rem;">
+                    <!-- Dynamically populated -->
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- 🏆 챔피언 선택 모달 -->
+    <div id="champion-modal" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(5, 7, 10, 0.9); z-index: 2000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(10px);">
+        <div style="background: rgba(15, 18, 26, 0.95); border: 2px solid var(--gold-main); border-radius: 20px; max-width: 600px; width: 90%; max-height: 80vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 0 35px rgba(200, 170, 110, 0.3);">
+            <div style="padding: 1.5rem; border-bottom: 1px solid var(--border-glass); display: flex; justify-content: space-between; align-items: center; background: rgba(200, 170, 110, 0.02);">
+                <h3 id="modal-title" style="color: var(--gold-bright); font-size: 1.1rem; font-family: 'Outfit';">챔피언 선택</h3>
+                <button onclick="closeChampionModal()" style="background: none; border: none; color: var(--text-secondary); font-size: 1.5rem; cursor: pointer; transition: color 0.2s; outline: none;">&times;</button>
+            </div>
+            <div style="padding: 1rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <input type="text" id="champion-search" placeholder="챔피언 이름 검색 (예: 아리, 아트로, Ahri)..." style="width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--border-glass); border-radius: 8px; padding: 0.8rem 1rem; color: var(--text-primary); outline: none; font-size: 0.9rem; transition: border-color 0.2s;">
+            </div>
+            <div id="champion-grid" style="flex: 1; padding: 1.5rem; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 1rem; background: rgba(5,7,10,0.2);">
+                <!-- Populated dynamically -->
+            </div>
+            <div style="padding: 1rem 1.5rem; border-top: 1px solid var(--border-glass); text-align: right; background: rgba(200, 170, 110, 0.01);">
+                <button onclick="clearSlot()" style="background: rgba(232, 64, 87, 0.15); border: 1px solid var(--red-team); color: var(--red-team); border-radius: 8px; padding: 0.5rem 1rem; font-size: 0.8rem; cursor: pointer; transition: all 0.2s; font-weight: 600; outline: none;">비우기 (Clear)</button>
+            </div>
+        </div>
     </div>
 
     <!-- Interactive Match Statistics Sliders -->
@@ -1152,6 +1284,13 @@
         redGoldDiff: 0, redExperienceDiff: 0, redCSPerMin: 21.0, redGoldPerMin: 1650.0
     };
 
+    // Champion Draft State Variables
+    let selectedBlueChampions = ["", "", "", "", ""];
+    let selectedRedChampions = ["", "", "", "", ""];
+    let allChampionsList = [];
+    let activeSlotTeam = "";
+    let activeSlotIndex = 0;
+
     let metricsData = null;
     let charts = {};
 
@@ -1316,7 +1455,11 @@
             const res = await fetch(`/api/predict?model_name=${encodeURIComponent(modelName)}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(features)
+                body: JSON.stringify({
+                    ...features,
+                    blue_champions: selectedBlueChampions.filter(c => c !== ""),
+                    red_champions: selectedRedChampions.filter(c => c !== "")
+                })
             });
             const data = await res.json();
             if (data.error) return;
@@ -1329,6 +1472,9 @@
             document.getElementById('bar-blue').style.width = (data.blue_win_probability * 100) + '%';
             document.getElementById('bar-red').style.width = (data.red_win_probability * 100) + '%';
             document.getElementById('model-info').innerText = `AI 예측 모델: ${data.model_used} 실시간 가동 중`;
+            
+            // 챔피언 조합 점수 및 분석 리포트 업데이트
+            updateCompositionUI(data);
             
             // Update Dragon Gold Value Card dynamically based on the difference
             const bDragons = features.blueDragons || 0;
@@ -1362,6 +1508,259 @@
                 }
             }
         } catch (e) {}
+    }
+
+    // Draft Board UI and Interaction Logic
+    async function loadChampions() {
+        try {
+            const res = await fetch('/api/champions');
+            allChampionsList = await res.json();
+            renderDraftSlots();
+            
+            // Set up search listener
+            const searchInput = document.getElementById('champion-search');
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    renderChampionGrid(e.target.value);
+                });
+            }
+        } catch (e) {
+            console.error("Failed to load champions:", e);
+        }
+    }
+
+    function renderDraftSlots() {
+        const blueSlots = document.getElementById('blue-slots');
+        const redSlots = document.getElementById('red-slots');
+        
+        if (!blueSlots || !redSlots) return;
+        
+        blueSlots.innerHTML = '';
+        redSlots.innerHTML = '';
+        
+        for (let i = 0; i < 5; i++) {
+            const bChamp = selectedBlueChampions[i];
+            const rChamp = selectedRedChampions[i];
+            
+            // Blue Slot
+            const bSlotDiv = document.createElement('div');
+            bSlotDiv.className = 'champ-slot' + (bChamp ? ' blue-active' : '');
+            bSlotDiv.onclick = () => openChampionModal('blue', i);
+            
+            if (bChamp) {
+                const champInfo = allChampionsList.find(c => c.id === bChamp) || { name: bChamp, image: '' };
+                bSlotDiv.innerHTML = `
+                    <img src="${champInfo.image || 'https://ddragon.leagueoflegends.com/cdn/14.22.1/img/champion/' + bChamp + '.png'}" onerror="this.src='/static/hextech_logo.png'" alt="${bChamp}">
+                    <div class="slot-name-overlay">${champInfo.name}</div>
+                `;
+            } else {
+                bSlotDiv.innerHTML = `
+                    <div class="slot-placeholder">🛡️</div>
+                    <div class="slot-label">선택</div>
+                `;
+            }
+            blueSlots.appendChild(bSlotDiv);
+            
+            // Red Slot
+            const rSlotDiv = document.createElement('div');
+            rSlotDiv.className = 'champ-slot' + (rChamp ? ' red-active' : '');
+            rSlotDiv.onclick = () => openChampionModal('red', i);
+            
+            if (rChamp) {
+                const champInfo = allChampionsList.find(c => c.id === rChamp) || { name: rChamp, image: '' };
+                rSlotDiv.innerHTML = `
+                    <img src="${champInfo.image || 'https://ddragon.leagueoflegends.com/cdn/14.22.1/img/champion/' + rChamp + '.png'}" onerror="this.src='/static/hextech_logo.png'" alt="${rChamp}">
+                    <div class="slot-name-overlay">${champInfo.name}</div>
+                `;
+            } else {
+                rSlotDiv.innerHTML = `
+                    <div class="slot-placeholder">⚔️</div>
+                    <div class="slot-label">선택</div>
+                `;
+            }
+            redSlots.appendChild(rSlotDiv);
+        }
+    }
+
+    function openChampionModal(team, index) {
+        activeSlotTeam = team;
+        activeSlotIndex = index;
+        
+        const title = document.getElementById('modal-title');
+        if (title) {
+            title.innerText = (team === 'blue' ? '블루팀' : '레드팀') + ` 포지션 ${index + 1} 챔피언 선택`;
+        }
+        
+        const searchInput = document.getElementById('champion-search');
+        if (searchInput) searchInput.value = '';
+        
+        renderChampionGrid('');
+        
+        const modal = document.getElementById('champion-modal');
+        if (modal) modal.style.display = 'flex';
+        if (searchInput) searchInput.focus();
+    }
+
+    function closeChampionModal() {
+        const modal = document.getElementById('champion-modal');
+        if (modal) modal.style.display = 'none';
+    }
+
+    function renderChampionGrid(searchTerm = '') {
+        const grid = document.getElementById('champion-grid');
+        if (!grid) return;
+        
+        grid.innerHTML = '';
+        
+        const term = searchTerm.toLowerCase().trim();
+        const filtered = allChampionsList.filter(c => 
+            c.name.toLowerCase().includes(term) || 
+            c.id.toLowerCase().includes(term)
+        );
+        
+        filtered.forEach(champ => {
+            const card = document.createElement('div');
+            card.style.display = 'flex';
+            card.style.flexDirection = 'column';
+            card.style.alignItems = 'center';
+            card.style.cursor = 'pointer';
+            card.style.padding = '0.5rem';
+            card.style.borderRadius = '8px';
+            card.style.background = 'rgba(255,255,255,0.02)';
+            card.style.border = '1px solid rgba(255,255,255,0.05)';
+            card.style.transition = 'all 0.2s';
+            
+            card.onmouseenter = () => {
+                card.style.borderColor = 'var(--gold-main)';
+                card.style.background = 'rgba(200,170,110,0.06)';
+                card.style.transform = 'scale(1.05)';
+            };
+            card.onmouseleave = () => {
+                card.style.borderColor = 'rgba(255,255,255,0.05)';
+                card.style.background = 'rgba(255,255,255,0.02)';
+                card.style.transform = 'scale(1)';
+            };
+            
+            card.onclick = () => selectChampion(champ.id);
+            
+            card.innerHTML = `
+                <img src="${champ.image}" onerror="this.src='/static/hextech_logo.png'" alt="${champ.name}" style="width: 50px; height: 50px; border-radius: 6px; border: 1px solid var(--border-glass);">
+                <span style="font-size: 0.72rem; margin-top: 0.4rem; text-align: center; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;">${champ.name}</span>
+            `;
+            grid.appendChild(card);
+        });
+        
+        if (filtered.length === 0) {
+            grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; color: var(--text-secondary); font-size: 0.8rem; padding: 2rem 0;">검색 결과가 없습니다.</div>';
+        }
+    }
+
+    function selectChampion(champId) {
+        if (activeSlotTeam === 'blue') {
+            selectedBlueChampions[activeSlotIndex] = champId;
+        } else {
+            selectedRedChampions[activeSlotIndex] = champId;
+        }
+        closeChampionModal();
+        renderDraftSlots();
+        predict();
+    }
+
+    function clearSlot() {
+        if (activeSlotTeam === 'blue') {
+            selectedBlueChampions[activeSlotIndex] = "";
+        } else {
+            selectedRedChampions[activeSlotIndex] = "";
+        }
+        closeChampionModal();
+        renderDraftSlots();
+        predict();
+    }
+
+    function updateCompositionUI(data) {
+        const blueScoreSpan = document.getElementById('blue-draft-score');
+        const redScoreSpan = document.getElementById('red-draft-score');
+        
+        if (blueScoreSpan && data.blue_comp_score !== undefined) {
+            blueScoreSpan.innerText = `조합 점수: ${(data.blue_comp_score * 100).toFixed(1)}%`;
+        }
+        if (redScoreSpan && data.red_comp_score !== undefined) {
+            redScoreSpan.innerText = `조합 점수: ${(data.red_comp_score * 100).toFixed(1)}%`;
+        }
+        
+        const analysisPanel = document.getElementById('composition-analysis-panel');
+        const blueSynergiesList = document.getElementById('blue-synergies-list');
+        const redSynergiesList = document.getElementById('red-synergies-list');
+        
+        if (!analysisPanel || !blueSynergiesList || !redSynergiesList) return;
+        
+        blueSynergiesList.innerHTML = '';
+        redSynergiesList.innerHTML = '';
+        
+        const hasBlueSynergies = data.blue_synergies && data.blue_synergies.length > 0;
+        const hasRedSynergies = data.red_synergies && data.red_synergies.length > 0;
+        
+        const blueCounters = (data.counters || []).filter(c => c.winner_team === 'blue');
+        const redCounters = (data.counters || []).filter(c => c.winner_team === 'red');
+        
+        const hasBlueCounters = blueCounters.length > 0;
+        const hasRedCounters = redCounters.length > 0;
+        
+        if (hasBlueSynergies || hasRedSynergies || hasBlueCounters || hasRedCounters) {
+            analysisPanel.style.display = 'grid';
+        } else {
+            analysisPanel.style.display = 'none';
+        }
+        
+        // Populate Blue list
+        if (hasBlueSynergies) {
+            data.blue_synergies.forEach(syn => {
+                blueSynergiesList.innerHTML += `
+                    <li style="display: flex; align-items: center; gap: 0.3rem;">
+                        <span style="color: var(--blue-team); font-weight: bold;">[시너지]</span>
+                        <span>${syn.names_kr.join(' + ')} (${(syn.bonus * 100).toFixed(1)}% 승률 보정)</span>
+                    </li>
+                `;
+            });
+        }
+        if (hasBlueCounters) {
+            blueCounters.forEach(cnt => {
+                blueSynergiesList.innerHTML += `
+                    <li style="display: flex; align-items: center; gap: 0.3rem;">
+                        <span style="color: #4cd137; font-weight: bold;">[상성우위]</span>
+                        <span>${cnt.counter_kr} ➔ ${cnt.victim_kr} (${(cnt.bonus * 100).toFixed(1)}% 상성 보정)</span>
+                    </li>
+                `;
+            });
+        }
+        if (!hasBlueSynergies && !hasBlueCounters) {
+            blueSynergiesList.innerHTML = '<li style="color: var(--text-secondary); opacity: 0.6;">활성화된 조합 시너지나 라인 카운터가 없습니다.</li>';
+        }
+        
+        // Populate Red list
+        if (hasRedSynergies) {
+            data.red_synergies.forEach(syn => {
+                redSynergiesList.innerHTML += `
+                    <li style="display: flex; align-items: center; gap: 0.3rem;">
+                        <span style="color: var(--red-team); font-weight: bold;">[시너지]</span>
+                        <span>${syn.names_kr.join(' + ')} (${(syn.bonus * 100).toFixed(1)}% 승률 보정)</span>
+                    </li>
+                `;
+            });
+        }
+        if (hasRedCounters) {
+            redCounters.forEach(cnt => {
+                redSynergiesList.innerHTML += `
+                    <li style="display: flex; align-items: center; gap: 0.3rem;">
+                        <span style="color: #4cd137; font-weight: bold;">[상성우위]</span>
+                        <span>${cnt.counter_kr} ➔ ${cnt.victim_kr} (${(cnt.bonus * 100).toFixed(1)}% 상성 보정)</span>
+                    </li>
+                `;
+            });
+        }
+        if (!hasRedSynergies && !hasRedCounters) {
+            redSynergiesList.innerHTML = '<li style="color: var(--text-secondary); opacity: 0.6;">활성화된 조합 시너지나 라인 카운터가 없습니다.</li>';
+        }
     }
 
     // Tab Switching Logic
@@ -1708,6 +2107,7 @@
 
     initInputs();
     loadMetrics();
+    loadChampions();
     predict();
 </script>
 </body>

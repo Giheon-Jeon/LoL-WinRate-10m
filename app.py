@@ -31,6 +31,38 @@ def get_metrics():
         metrics = json.load(f)
     return jsonify(metrics)
 
+@app.route("/api/champions")
+def get_champions():
+    import urllib.request
+    url = "https://ddragon.leagueoflegends.com/cdn/14.22.1/data/ko_KR/champion.json"
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=3) as response:
+            data = json.loads(response.read().decode('utf-8'))
+            champions_dict = data.get("data", {})
+            champions_list = []
+            for c_id, c_data in champions_dict.items():
+                champions_list.append({
+                    "id": c_id,
+                    "name": c_data.get("name"),
+                    "title": c_data.get("title"),
+                    "image": f"https://ddragon.leagueoflegends.com/cdn/14.22.1/img/champion/{c_id}.png"
+                })
+            champions_list.sort(key=lambda x: x["name"])
+            return jsonify(champions_list)
+    except Exception as e:
+        from backend.champion_data import CHAMPION_NAMES_KR
+        champions_list = []
+        for c_id, name_kr in CHAMPION_NAMES_KR.items():
+            champions_list.append({
+                "id": c_id,
+                "name": name_kr,
+                "title": "",
+                "image": f"https://ddragon.leagueoflegends.com/cdn/14.22.1/img/champion/{c_id}.png"
+            })
+        champions_list.sort(key=lambda x: x["name"])
+        return jsonify(champions_list)
+
 def calculate_dragon_gold_value(model_name, full_input, feature_order, feature_defaults):
     # Helper to predict win probability for a given input dict
     def get_prob(inp_dict):
@@ -153,12 +185,36 @@ def predict_match():
     # First Blood exclusive
     input_dict['redFirstBlood'] = 1 if input_dict.get('blueFirstBlood') == 0 else 0
 
+    # 챔피언 조합 점수 파싱 및 계산
+    blue_champions = input_data.get('blue_champions', [])
+    red_champions = input_data.get('red_champions', [])
+    
+    global comp_results
+    comp_results = {
+        "blue_score": 0.50,
+        "red_score": 0.50,
+        "blue_synergies": [],
+        "red_synergies": [],
+        "counters": []
+    }
+    
+    if blue_champions or red_champions:
+        try:
+            from backend.champion_data import calculate_composition_scores
+            comp_results = calculate_composition_scores(blue_champions, red_champions)
+        except Exception as e:
+            print(f"Error calculating composition scores: {e}")
+            
+    input_dict['blueCompScore'] = comp_results['blue_score']
+    input_dict['redCompScore'] = comp_results['red_score']
+
     # Ensure all required features are present with default values
     feature_defaults = {
         'blueWardsPlaced': 15, 'blueWardsDestroyed': 2, 'blueFirstBlood': 1, 'blueKills': 5, 'blueDeaths': 5, 'blueAssists': 5,
         'blueEliteMonsters': 0, 'blueDragons': 0, 'blueHeralds': 0, 'blueTowersDestroyed': 0, 'blueTotalGold': 16500, 'blueAvgLevel': 6.8,
         'blueTotalExperience': 18000, 'blueTotalMinionsKilled': 210, 'blueTotalJungleMinionsKilled': 50, 'blueGoldDiff': 0,
         'blueExperienceDiff': 0, 'blueCSPerMin': 21.0, 'blueGoldPerMin': 1650.0,
+        'blueCompScore': 0.50, 'redCompScore': 0.50,
         'redWardsPlaced': 15, 'redWardsDestroyed': 2, 'redFirstBlood': 0, 'redKills': 5, 'redDeaths': 5, 'redAssists': 5,
         'redEliteMonsters': 0, 'redDragons': 0, 'redHeralds': 0, 'redTowersDestroyed': 0, 'redTotalGold': 16500, 'redAvgLevel': 6.8,
         'redTotalExperience': 18000, 'redTotalMinionsKilled': 210, 'redTotalJungleMinionsKilled': 50, 'redCSPerMin': 21.0, 'redGoldPerMin': 1650.0
@@ -245,7 +301,12 @@ def predict_match():
             "winner": "Blue" if prediction == 1 else "Red",
             "blue_win_probability": float(blue_win_probability),
             "red_win_probability": float(1.0 - blue_win_probability),
-            "dragon_gold_value": float(dragon_gold_val)
+            "dragon_gold_value": float(dragon_gold_val),
+            "blue_comp_score": float(comp_results['blue_score']),
+            "red_comp_score": float(comp_results['red_score']),
+            "blue_synergies": comp_results['blue_synergies'],
+            "red_synergies": comp_results['red_synergies'],
+            "counters": comp_results['counters']
         })
     except Exception as e:
         return jsonify({"error": f"Prediction failed: {str(e)}"}), 500

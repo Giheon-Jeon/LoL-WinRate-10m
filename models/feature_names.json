@@ -34,5 +34,7 @@
     "redTotalMinionsKilled",
     "redTotalJungleMinionsKilled",
     "redCSPerMin",
-    "redGoldPerMin"
+    "redGoldPerMin",
+    "blueCompScore",
+    "redCompScore"
 ]
