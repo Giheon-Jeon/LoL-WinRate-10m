@@ -224,3 +224,41 @@ def calculate_composition_scores(blue_champions, red_champions):
         "red_synergies": red_synergies_detected,
         "counters": counters_detected
     }
+
+CHAMPION_TAGS = {
+    "Aatrox": "Fighter", "Fiora": "Fighter", "Jax": "Fighter", "Malphite": "Tank", "Ornn": "Tank",
+    "LeeSin": "Fighter", "Graves": "Marksman", "Viego": "Fighter", "KhaZix": "Assassin",
+    "Ahri": "Mage", "Yasuo": "Fighter", "Zed": "Assassin", "Syndra": "Mage",
+    "Ezreal": "Marksman", "Jinx": "Marksman", "Ashe": "Marksman", "Kaisa": "Marksman",
+    "Thresh": "Support", "Lulu": "Support", "Leona": "Tank", "Nautilus": "Tank"
+}
+
+def get_champion_tags(champions_list):
+    """챔피언 리스트를 받아 해당하는 주요 태그 리스트를 반환합니다."""
+    tags = []
+    for c in champions_list:
+        if not c:
+            tags.append("Unknown")
+            continue
+        tag = CHAMPION_TAGS.get(c, "Unknown")
+        tags.append(tag)
+    return tags
+
+def determine_composition(tags):
+    """태그 리스트를 분석하여 팀 조합을 판별합니다."""
+    tank_count = tags.count('Tank')
+    bruiser_count = tags.count('Fighter')
+    assassin_count = tags.count('Assassin')
+    carry_count = tags.count('Marksman')
+    mage_count = tags.count('Mage')
+
+    if bruiser_count >= 3:
+        return '브루저조합'
+    elif assassin_count >= 2:
+        return '암살자조합'
+    elif tank_count >= 3:
+        return '전체탱커'
+    elif carry_count >= 2 and tags.count('Support') >= 1:
+        return '하이퍼캐리'
+    else:
+        return '혼합조합'
