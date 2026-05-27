@@ -752,8 +752,11 @@
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
             <!-- Blue Team Draft -->
             <div style="display: flex; flex-direction: column; gap: 0.8rem;">
-                <h4 style="color: var(--blue-team); font-size: 0.95rem; font-weight: 700; border-bottom: 1px solid rgba(31, 142, 206, 0.15); padding-bottom: 0.5rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between;">
-                    <span>🔵 블루팀 챔피언 조합</span>
+                <h4 style="color: var(--blue-team); font-size: 0.95rem; font-weight: 700; border-bottom: 1px solid rgba(31, 142, 206, 0.15); padding-bottom: 0.5rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 0.6rem;">
+                        <span>🔵 블루팀 챔피언 조합</span>
+                        <button onclick="clearTeam('blue')" style="background: rgba(232, 64, 87, 0.12); border: 1px solid rgba(232, 64, 87, 0.4); color: var(--red-team); border-radius: 4px; padding: 0.15rem 0.45rem; font-size: 0.68rem; cursor: pointer; font-weight: 600; outline: none; transition: all 0.2s;" onmouseover="this.style.background='rgba(232, 64, 87, 0.25)'; this.style.borderColor='var(--red-team)';" onmouseout="this.style.background='rgba(232, 64, 87, 0.12)'; this.style.borderColor='rgba(232, 64, 87, 0.4)';">초기화</button>
+                    </div>
                     <span id="blue-draft-score" style="color: var(--gold-main); font-family: 'Outfit'; font-weight: 800;">조합 점수: 50.0%</span>
                 </h4>
                 <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem;" id="blue-slots">
@@ -763,8 +766,11 @@
             
             <!-- Red Team Draft -->
             <div style="display: flex; flex-direction: column; gap: 0.8rem;">
-                <h4 style="color: var(--red-team); font-size: 0.95rem; font-weight: 700; border-bottom: 1px solid rgba(232, 64, 87, 0.15); padding-bottom: 0.5rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between;">
-                    <span>🔴 레드팀 챔피언 조합</span>
+                <h4 style="color: var(--red-team); font-size: 0.95rem; font-weight: 700; border-bottom: 1px solid rgba(232, 64, 87, 0.15); padding-bottom: 0.5rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 0.6rem;">
+                        <span>🔴 레드팀 챔피언 조합</span>
+                        <button onclick="clearTeam('red')" style="background: rgba(232, 64, 87, 0.12); border: 1px solid rgba(232, 64, 87, 0.4); color: var(--red-team); border-radius: 4px; padding: 0.15rem 0.45rem; font-size: 0.68rem; cursor: pointer; font-weight: 600; outline: none; transition: all 0.2s;" onmouseover="this.style.background='rgba(232, 64, 87, 0.25)'; this.style.borderColor='var(--red-team)';" onmouseout="this.style.background='rgba(232, 64, 87, 0.12)'; this.style.borderColor='rgba(232, 64, 87, 0.4)';">초기화</button>
+                    </div>
                     <span id="red-draft-score" style="color: var(--gold-main); font-family: 'Outfit'; font-weight: 800;">조합 점수: 50.0%</span>
                 </h4>
                 <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.5rem;" id="red-slots">
@@ -1661,9 +1667,29 @@
         } else {
             selectedRedChampions[activeSlotIndex] = champId;
         }
-        closeChampionModal();
+        
         renderDraftSlots();
         predict();
+        
+        // 다음 슬롯으로 자동 전환 (최대 5명 선택할 때까지 모달 유지)
+        if (activeSlotIndex < 4) {
+            activeSlotIndex++;
+            const title = document.getElementById('modal-title');
+            if (title) {
+                title.innerText = (activeSlotTeam === 'blue' ? '블루팀' : '레드팀') + ` 포지션 ${activeSlotIndex + 1} 챔피언 선택`;
+            }
+            
+            // 검색 인풋 초기화 및 포커스 유지
+            const searchInput = document.getElementById('champion-search');
+            if (searchInput) {
+                searchInput.value = '';
+                searchInput.focus();
+            }
+            renderChampionGrid('');
+        } else {
+            // 5번째 챔피언까지 모두 선택 시 모달 닫기
+            closeChampionModal();
+        }
     }
 
     function clearSlot() {
@@ -1673,6 +1699,16 @@
             selectedRedChampions[activeSlotIndex] = "";
         }
         closeChampionModal();
+        renderDraftSlots();
+        predict();
+    }
+
+    function clearTeam(team) {
+        if (team === 'blue') {
+            selectedBlueChampions = ["", "", "", "", ""];
+        } else {
+            selectedRedChampions = ["", "", "", "", ""];
+        }
         renderDraftSlots();
         predict();
     }

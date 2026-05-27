@@ -31,9 +31,27 @@ def train_and_evaluate():
     if 'match_id' in df.columns:
         df = df.drop(columns=['match_id'])
     
-    # 챔피언 이름 컬럼은 피처 공간이 너무 커지므로 모델 피처에서는 제거 (대신 태그와 조합 데이터 사용)
-    champion_cols = [c for c in df.columns if 'champion' in c]
-    df = df.drop(columns=champion_cols)
+    # 챔피언 이름 컬럼을 기반으로 블루/레드 팀별 챔피언 멀티핫 피처 생성
+    blue_champion_cols = ['blue_top_champion', 'blue_jungle_champion', 'blue_middle_champion', 'blue_bottom_champion', 'blue_utility_champion']
+    red_champion_cols = ['red_top_champion', 'red_jungle_champion', 'red_middle_champion', 'red_bottom_champion', 'red_utility_champion']
+    
+    all_champions = set()
+    for col in blue_champion_cols + red_champion_cols:
+        if col in df.columns:
+            all_champions.update(df[col].dropna().unique())
+    all_champions = sorted(list(all_champions))
+    
+    # 성능 최적화를 위해 각 행의 챔피언들을 set으로 사전 변환
+    blue_champs_sets = df[blue_champion_cols].apply(lambda row: set(row.dropna().values), axis=1)
+    red_champs_sets = df[red_champion_cols].apply(lambda row: set(row.dropna().values), axis=1)
+    
+    for champ in all_champions:
+        df[f'blue_champion_{champ}'] = blue_champs_sets.apply(lambda s: 1.0 if champ in s else 0.0)
+        df[f'red_champion_{champ}'] = red_champs_sets.apply(lambda s: 1.0 if champ in s else 0.0)
+        
+    # 원본 챔피언명 컬럼들 제거
+    existing_champion_cols = [c for c in blue_champion_cols + red_champion_cols if c in df.columns]
+    df = df.drop(columns=existing_champion_cols)
     
     # 문자열 컬럼 (태그, 조합 등) 원핫 인코딩
     categorical_cols = [c for c in df.columns if 'tag' in c or 'comp' in c]

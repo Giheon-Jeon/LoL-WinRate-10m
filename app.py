@@ -65,37 +65,90 @@ def get_champions():
         champions_list.sort(key=lambda x: x["name"])
         return jsonify(champions_list)
 
+def run_model_inference(model_name, feature_dict, feature_order):
+    """
+    주어진 feature_dict와 feature_order를 바탕으로 특정 모델의 승률(블루팀 승리 확률)을 계산합니다.
+    """
+    input_values = [feature_dict.get(f, 0.0) for f in feature_order]
+    
+    if model_name == "Logistic Regression":
+        from models.logistic_regression_code import score as lr_score
+        scaler_file = os.path.join(MODELS_DIR, "scaler.json")
+        with open(scaler_file, "r") as f:
+            scaler_data = json.load(f)
+            scaler_mean = scaler_data["mean"]
+            scaler_scale = scaler_data["scale"]
+        
+        X_scaled = [(x_i - mean_i) / (scale_i if scale_i != 0 else 1) for x_i, mean_i, scale_i in zip(input_values, scaler_mean, scaler_scale)]
+        margin = lr_score(X_scaled)
+        return 1.0 / (1.0 + np.exp(-margin))
+        
+    elif model_name == "Random Forest":
+        from models.random_forest_code import score as rf_score
+        proba = rf_score(input_values)
+        return proba[1]
+        
+    elif model_name == "XGBoost":
+        from models.xgboost_code import score as xgb_score
+        proba = xgb_score(input_values)
+        return proba[1]
+    else:
+        raise ValueError(f"Invalid model name: {model_name}")
+
+def calculate_ml_composition_score(model_name, blue_champs, red_champs, feature_order):
+    """
+    모든 경제적 지표를 동등(격차 0)하게 맞춘 상태에서 챔피언 조합만으로 얻어지는 모델 예측 승률을
+    해당 알고리즘의 조합 점수(Composition Score)로 계산합니다.
+    """
+    # 1. 중립 경제 피처 구축 (input_data={} 전달 시 기본값 탑재)
+    feature_dict = build_lane_features({})
+    
+    # 2. 챔피언 태그 및 조합 분석 적용
+    from backend.champion_data import get_champion_tags, determine_composition
+    
+    # 빈 슬롯 채우기 (최대 5명)
+    blue_champs_full = list(blue_champs)
+    red_champs_full = list(red_champs)
+    while len(blue_champs_full) < 5: blue_champs_full.append("")
+    while len(red_champs_full) < 5: red_champs_full.append("")
+    
+    blue_tags = get_champion_tags(blue_champs_full)
+    red_tags = get_champion_tags(red_champs_full)
+    blue_comp_name = determine_composition(blue_tags)
+    red_comp_name = determine_composition(red_tags)
+    
+    roles = ['top', 'jungle', 'middle', 'bottom', 'utility']
+    for i, role in enumerate(roles):
+        feature_dict[f'blue_{role}_tag_{blue_tags[i]}'] = 1.0
+        feature_dict[f'red_{role}_tag_{red_tags[i]}'] = 1.0
+        
+    feature_dict[f'blue_comp_{blue_comp_name}'] = 1.0
+    feature_dict[f'red_comp_{red_comp_name}'] = 1.0
+    
+    # 3. 챔피언 멀티핫 피처 탑재
+    for champ in blue_champs_full:
+        if champ:
+            feature_dict[f'blue_champion_{champ}'] = 1.0
+    for champ in red_champs_full:
+        if champ:
+            feature_dict[f'red_champion_{champ}'] = 1.0
+            
+    # 4. 모델 추론
+    try:
+        blue_prob = run_model_inference(model_name, feature_dict, feature_order)
+        return float(blue_prob)
+    except Exception:
+        return 0.5
+
 def calculate_dragon_gold_value(model_name, full_input, feature_order):
     """
     편미분을 이용해 드래곤 1마리가 승률에 미치는 영향을 골드 가치로 환산합니다.
     """
     def get_prob(inp_dict):
-        # 피처 정렬
-        input_vals = [inp_dict.get(f, 0.0) for f in feature_order]
-        
-        if model_name == "Logistic Regression":
-            from models.logistic_regression_code import score as lr_score
-            scaler_file = os.path.join(MODELS_DIR, "scaler.json")
-            if not os.path.exists(scaler_file):
-                return 0.5
-            with open(scaler_file, "r") as f:
-                scaler_data = json.load(f)
-                scaler_mean = scaler_data["mean"]
-                scaler_scale = scaler_data["scale"]
-            X_scaled = [(x_i - mean_i) / (scale_i if scale_i != 0 else 1) for x_i, mean_i, scale_i in zip(input_vals, scaler_mean, scaler_scale)]
-            margin = lr_score(X_scaled)
-            return 1.0 / (1.0 + np.exp(-margin))
-            
-        elif model_name == "Random Forest":
-            from models.random_forest_code import score as rf_score
-            proba = rf_score(input_vals)
-            return proba[1]
-            
-        elif model_name == "XGBoost":
-            from models.xgboost_code import score as xgb_score
-            proba = xgb_score(input_vals)
-            return proba[1]
-        return 0.5
+        try:
+            return run_model_inference(model_name, inp_dict, feature_order)
+        except Exception:
+            return 0.5
 
     # 1. 현재 승률
     p_current = get_prob(full_input)
@@ -238,6 +291,14 @@ def predict_match():
     feature_dict[f'blue_comp_{blue_comp_name}'] = 1.0
     feature_dict[f'red_comp_{red_comp_name}'] = 1.0
 
+    # 챔피언 멀티핫 피처 추가 (기본 0, 일치하면 1)
+    for champ in blue_champs:
+        if champ:
+            feature_dict[f'blue_champion_{champ}'] = 1.0
+    for champ in red_champs:
+        if champ:
+            feature_dict[f'red_champion_{champ}'] = 1.0
+
     # 4. 저장된 Feature 순서에 맞게 입력 배열 생성
     feature_order = []
     feature_names_file = os.path.join(MODELS_DIR, "feature_names.json")
@@ -256,38 +317,23 @@ def predict_match():
     
     try:
         # 모델 추론 수행
-        if model_name == "Logistic Regression":
-            from models.logistic_regression_code import score as lr_score
-            scaler_file = os.path.join(MODELS_DIR, "scaler.json")
-            with open(scaler_file, "r") as f:
-                scaler_data = json.load(f)
-                scaler_mean = scaler_data["mean"]
-                scaler_scale = scaler_data["scale"]
-            
-            X_scaled = [(x_i - mean_i) / (scale_i if scale_i != 0 else 1) for x_i, mean_i, scale_i in zip(input_values, scaler_mean, scaler_scale)]
-            margin = lr_score(X_scaled)
-            blue_win_prob = 1.0 / (1.0 + np.exp(-margin))
-            
-        elif model_name == "Random Forest":
-            from models.random_forest_code import score as rf_score
-            proba = rf_score(input_values)
-            blue_win_prob = proba[1]
-            
-        elif model_name == "XGBoost":
-            from models.xgboost_code import score as xgb_score
-            proba = xgb_score(input_values)
-            blue_win_prob = proba[1]
-            
-        else:
-            return jsonify({"error": f"Invalid model: {model_name}"}), 400
+        try:
+            blue_win_prob = run_model_inference(model_name, feature_dict, feature_order)
+        except ValueError as ve:
+            return jsonify({"error": str(ve)}), 400
             
         prediction = 1 if blue_win_prob >= 0.5 else 0
         
         # 드래곤 가치 편미분 계산
         dragon_val = calculate_dragon_gold_value(model_name, feature_dict, feature_order)
         
-        # 기존 로직과 호환성 유지용 임시 시너지 데이터
-        synergies = {"blue_synergies": [], "red_synergies": [], "counters": []}
+        # 챔피언 조합 점수 연산 (선택한 머신러닝 모델 기반)
+        blue_comp_score = calculate_ml_composition_score(model_name, blue_champs, red_champs, feature_order)
+        red_comp_score = 1.0 - blue_comp_score
+        
+        # UI 시너지/카운터 텍스트 바인딩을 위해 기존 분석기도 동시 호출
+        from backend.champion_data import calculate_composition_scores
+        comp_details = calculate_composition_scores(blue_champs, red_champs)
         
         return jsonify({
             "model_used": model_name,
@@ -296,11 +342,11 @@ def predict_match():
             "blue_win_probability": float(blue_win_prob),
             "red_win_probability": float(1.0 - blue_win_prob),
             "dragon_gold_value": float(dragon_val),
-            "blue_comp_score": 0.5, # 새로운 데이터에선 미사용
-            "red_comp_score": 0.5,
-            "blue_synergies": synergies['blue_synergies'],
-            "red_synergies": synergies['red_synergies'],
-            "counters": synergies['counters']
+            "blue_comp_score": float(blue_comp_score),
+            "red_comp_score": float(red_comp_score),
+            "blue_synergies": comp_details["blue_synergies"],
+            "red_synergies": comp_details["red_synergies"],
+            "counters": comp_details["counters"]
         })
     except Exception as e:
         return jsonify({"error": f"예측 중 오류 발생: {str(e)}"}), 500
