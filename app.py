@@ -355,6 +355,10 @@ def calculate_ml_composition_score(model_name, blue_champs, red_champs, feature_
     모든 경제적 지표를 동등(격차 0)하게 맞춘 상태에서 챔피언 조합만으로 얻어지는 모델 예측 승률을
     해당 알고리즘의 조합 점수(Composition Score)로 계산합니다.
     """
+    # 양 팀 챔피언이 한 명도 선택되지 않은 경우 조합 점수는 대칭인 0.50 (50%) 반환
+    if not any(blue_champs) and not any(red_champs):
+        return 0.50
+        
     # 1. 중립 경제 피처 구축 (input_data={} 전달 시 기본값 탑재)
     feature_dict = build_lane_features({})
     

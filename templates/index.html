@@ -1862,114 +1862,142 @@
 
     // Render Coefficient Chart using Chart.js
     function renderCoefficientsChart(canvasId, coefficients) {
-        if (charts[canvasId]) {
-            charts[canvasId].destroy();
-        }
-        
-        // Sort features by absolute coefficient size
-        const sorted = Object.entries(coefficients)
-            .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
-            .slice(0, 10);
+        try {
+            if (typeof Chart === 'undefined') {
+                console.warn("Chart.js is not defined. Skip rendering chart for: " + canvasId);
+                const canvas = document.getElementById(canvasId);
+                if (canvas) {
+                    canvas.outerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-secondary);font-size:0.8rem;border:1px dashed rgba(255,255,255,0.1);border-radius:8px;padding:2rem;text-align:center;">Chart.js 라이브러리를 로드할 수 없어 차트를 표시할 수 없습니다. (인터넷 연결 상태를 확인해주세요)</div>`;
+                }
+                return;
+            }
+            if (charts[canvasId]) {
+                charts[canvasId].destroy();
+            }
             
-        const labels = sorted.map(item => translateFeature(item[0]));
-        const values = sorted.map(item => item[1]);
-        
-        const ctx = document.getElementById(canvasId).getContext('2d');
-        charts[canvasId] = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    data: values,
-                    backgroundColor: values.map(v => v >= 0 ? 'rgba(31, 142, 206, 0.65)' : 'rgba(232, 64, 87, 0.65)'),
-                    borderColor: values.map(v => v >= 0 ? '#1f8ece' : '#e84057'),
-                    borderWidth: 1.5,
-                    borderRadius: 4
-                }]
-            },
-            options: {
-                indexAxis: 'y',
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return ' 계수: ' + context.raw.toFixed(4);
+            // Sort features by absolute coefficient size
+            const sorted = Object.entries(coefficients)
+                .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
+                .slice(0, 10);
+                
+            const labels = sorted.map(item => translateFeature(item[0]));
+            const values = sorted.map(item => item[1]);
+            
+            const canvasElem = document.getElementById(canvasId);
+            if (!canvasElem) return;
+            const ctx = canvasElem.getContext('2d');
+            charts[canvasId] = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: values.map(v => v >= 0 ? 'rgba(31, 142, 206, 0.65)' : 'rgba(232, 64, 87, 0.65)'),
+                        borderColor: values.map(v => v >= 0 ? '#1f8ece' : '#e84057'),
+                        borderWidth: 1.5,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return ' 계수: ' + context.raw.toFixed(4);
+                                }
                             }
                         }
-                    }
-                },
-                scales: {
-                    x: {
-                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                        ticks: { color: '#a0a0a0' }
                     },
-                    y: {
-                        grid: { display: false },
-                        ticks: { color: '#f0f0f0', font: { family: 'Inter', size: 10 } }
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: { color: '#a0a0a0' }
+                        },
+                        y: {
+                            grid: { display: false },
+                            ticks: { color: '#f0f0f0', font: { family: 'Inter', size: 10 } }
+                        }
                     }
                 }
-            }
-        });
+            });
+        } catch (e) {
+            console.error("Error rendering coefficients chart:", e);
+        }
     }
 
     // Render Feature Importance Chart
     function renderImportanceChart(canvasId, importances, isXGB = false) {
-        if (charts[canvasId]) {
-            charts[canvasId].destroy();
-        }
-        
-        const sorted = Object.entries(importances)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 10);
+        try {
+            if (typeof Chart === 'undefined') {
+                console.warn("Chart.js is not defined. Skip rendering chart for: " + canvasId);
+                const canvas = document.getElementById(canvasId);
+                if (canvas) {
+                    canvas.outerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-secondary);font-size:0.8rem;border:1px dashed rgba(255,255,255,0.1);border-radius:8px;padding:2rem;text-align:center;">Chart.js 라이브러리를 로드할 수 없어 차트를 표시할 수 없습니다. (인터넷 연결 상태를 확인해주세요)</div>`;
+                }
+                return;
+            }
+            if (charts[canvasId]) {
+                charts[canvasId].destroy();
+            }
             
-        const labels = sorted.map(item => translateFeature(item[0]));
-        const values = sorted.map(item => item[1]);
-        
-        const color = isXGB ? 'rgba(232, 64, 87, 0.65)' : 'rgba(31, 142, 206, 0.65)';
-        const borderColor = isXGB ? '#e84057' : '#1f8ece';
-        
-        const ctx = document.getElementById(canvasId).getContext('2d');
-        charts[canvasId] = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    data: values,
-                    backgroundColor: color,
-                    borderColor: borderColor,
-                    borderWidth: 1.5,
-                    borderRadius: 4
-                }]
-            },
-            options: {
-                indexAxis: 'y',
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return ' 중요도: ' + (context.raw * 100).toFixed(2) + '%';
+            const sorted = Object.entries(importances)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10);
+                
+            const labels = sorted.map(item => translateFeature(item[0]));
+            const values = sorted.map(item => item[1]);
+            
+            const color = isXGB ? 'rgba(232, 64, 87, 0.65)' : 'rgba(31, 142, 206, 0.65)';
+            const borderColor = isXGB ? '#e84057' : '#1f8ece';
+            
+            const canvasElem = document.getElementById(canvasId);
+            if (!canvasElem) return;
+            const ctx = canvasElem.getContext('2d');
+            charts[canvasId] = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: color,
+                        borderColor: borderColor,
+                        borderWidth: 1.5,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return ' 중요도: ' + (context.raw * 100).toFixed(2) + '%';
+                                }
                             }
                         }
-                    }
-                },
-                scales: {
-                    x: {
-                        grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                        ticks: { color: '#a0a0a0' }
                     },
-                    y: {
-                        grid: { display: false },
-                        ticks: { color: '#f0f0f0', font: { family: 'Inter', size: 10 } }
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: { color: '#a0a0a0' }
+                        },
+                        y: {
+                            grid: { display: false },
+                            ticks: { color: '#f0f0f0', font: { family: 'Inter', size: 10 } }
+                        }
                     }
                 }
-            }
-        });
+            });
+        } catch (e) {
+            console.error("Error rendering importance chart:", e);
+        }
     }
 
     // Load Metrics from Backend and Update Dashboard Elements
@@ -1977,28 +2005,44 @@
         try {
             const res = await fetch('/api/metrics');
             const data = await res.json();
+            
+            if (data.error) {
+                console.warn("Backend metrics error:", data.error);
+                const body = document.getElementById('metricsBody');
+                if (body) {
+                    body.innerHTML = `<tr><td colspan="4" style="color:var(--red-team);text-align:center;">${data.error}</td></tr>`;
+                }
+                return;
+            }
+            
             metricsData = data;
             
             // 1. Update general comparison table
             const body = document.getElementById('metricsBody');
-            body.innerHTML = '';
-            for (let model in data) {
-                body.innerHTML += `<tr><td style="color:var(--gold-main); font-weight:600;">${model}</td><td>${(data[model].Accuracy * 100).toFixed(1)}%</td><td>${(data[model]["F1-Score"] * 100).toFixed(1)}%</td><td>${(data[model]["ROC-AUC"] * 100).toFixed(2)}</td></tr>`;
+            if (body) {
+                body.innerHTML = '';
+                for (let model in data) {
+                    if (data[model] && typeof data[model] === 'object' && 'Accuracy' in data[model]) {
+                        body.innerHTML += `<tr><td style="color:var(--gold-main); font-weight:600;">${model}</td><td>${(data[model].Accuracy * 100).toFixed(1)}%</td><td>${(data[model]["F1-Score"] * 100).toFixed(1)}%</td><td>${(data[model]["ROC-AUC"] * 100).toFixed(2)}</td></tr>`;
+                    }
+                }
             }
             
             // 2. Update Logistic Regression Tab
             if (data["Logistic Regression"]) {
                 const lr = data["Logistic Regression"];
-                document.getElementById('lr-acc').innerText = (lr.Accuracy * 100).toFixed(1) + '%';
-                document.getElementById('lr-f1').innerText = (lr["F1-Score"] * 100).toFixed(1) + '%';
-                document.getElementById('lr-auc').innerText = lr["ROC-AUC"].toFixed(3);
-                document.getElementById('lr-prec').innerText = (lr.Precision * 100).toFixed(1) + '%';
+                if (document.getElementById('lr-acc')) document.getElementById('lr-acc').innerText = (lr.Accuracy * 100).toFixed(1) + '%';
+                if (document.getElementById('lr-f1')) document.getElementById('lr-f1').innerText = (lr["F1-Score"] * 100).toFixed(1) + '%';
+                if (document.getElementById('lr-auc')) document.getElementById('lr-auc').innerText = lr["ROC-AUC"].toFixed(3);
+                if (document.getElementById('lr-prec')) document.getElementById('lr-prec').innerText = (lr.Precision * 100).toFixed(1) + '%';
                 
                 // CM
-                document.getElementById('lr-cm-tp').innerText = lr.Confusion_Matrix.TP;
-                document.getElementById('lr-cm-fp').innerText = lr.Confusion_Matrix.FP;
-                document.getElementById('lr-cm-fn').innerText = lr.Confusion_Matrix.FN;
-                document.getElementById('lr-cm-tn').innerText = lr.Confusion_Matrix.TN;
+                if (lr.Confusion_Matrix) {
+                    if (document.getElementById('lr-cm-tp')) document.getElementById('lr-cm-tp').innerText = lr.Confusion_Matrix.TP;
+                    if (document.getElementById('lr-cm-fp')) document.getElementById('lr-cm-fp').innerText = lr.Confusion_Matrix.FP;
+                    if (document.getElementById('lr-cm-fn')) document.getElementById('lr-cm-fn').innerText = lr.Confusion_Matrix.FN;
+                    if (document.getElementById('lr-cm-tn')) document.getElementById('lr-cm-tn').innerText = lr.Confusion_Matrix.TN;
+                }
                 
                 // Coefficients chart
                 renderCoefficientsChart('lrChart', lr.Coefficients);
@@ -2006,24 +2050,26 @@
                 // Dragon gold value
                 if (lr.Dragon_Gold_Value) {
                     const goldVal = Math.round(lr.Dragon_Gold_Value);
-                    document.getElementById('dragon-gold-val').innerText = goldVal.toLocaleString() + ' Gold';
-                    document.getElementById('dragon-gold-text').innerText = goldVal.toLocaleString() + ' 골드';
+                    if (document.getElementById('dragon-gold-val')) document.getElementById('dragon-gold-val').innerText = goldVal.toLocaleString() + ' Gold';
+                    if (document.getElementById('dragon-gold-text')) document.getElementById('dragon-gold-text').innerText = goldVal.toLocaleString() + ' 골드';
                 }
             }
             
             // 3. Update Random Forest Tab
             if (data["Random Forest"]) {
                 const rf = data["Random Forest"];
-                document.getElementById('rf-acc').innerText = (rf.Accuracy * 100).toFixed(1) + '%';
-                document.getElementById('rf-f1').innerText = (rf["F1-Score"] * 100).toFixed(1) + '%';
-                document.getElementById('rf-auc').innerText = rf["ROC-AUC"].toFixed(3);
-                document.getElementById('rf-prec').innerText = (rf.Precision * 100).toFixed(1) + '%';
+                if (document.getElementById('rf-acc')) document.getElementById('rf-acc').innerText = (rf.Accuracy * 100).toFixed(1) + '%';
+                if (document.getElementById('rf-f1')) document.getElementById('rf-f1').innerText = (rf["F1-Score"] * 100).toFixed(1) + '%';
+                if (document.getElementById('rf-auc')) document.getElementById('rf-auc').innerText = rf["ROC-AUC"].toFixed(3);
+                if (document.getElementById('rf-prec')) document.getElementById('rf-prec').innerText = (rf.Precision * 100).toFixed(1) + '%';
                 
                 // CM
-                document.getElementById('rf-cm-tp').innerText = rf.Confusion_Matrix.TP;
-                document.getElementById('rf-cm-fp').innerText = rf.Confusion_Matrix.FP;
-                document.getElementById('rf-cm-fn').innerText = rf.Confusion_Matrix.FN;
-                document.getElementById('rf-cm-tn').innerText = rf.Confusion_Matrix.TN;
+                if (rf.Confusion_Matrix) {
+                    if (document.getElementById('rf-cm-tp')) document.getElementById('rf-cm-tp').innerText = rf.Confusion_Matrix.TP;
+                    if (document.getElementById('rf-cm-fp')) document.getElementById('rf-cm-fp').innerText = rf.Confusion_Matrix.FP;
+                    if (document.getElementById('rf-cm-fn')) document.getElementById('rf-cm-fn').innerText = rf.Confusion_Matrix.FN;
+                    if (document.getElementById('rf-cm-tn')) document.getElementById('rf-cm-tn').innerText = rf.Confusion_Matrix.TN;
+                }
                 
                 // Feature importances
                 renderImportanceChart('rfChart', rf.Feature_Importances, false);
@@ -2032,23 +2078,26 @@
             // 4. Update XGBoost Tab
             if (data["XGBoost"]) {
                 const xgb = data["XGBoost"];
-                document.getElementById('xgb-acc').innerText = (xgb.Accuracy * 100).toFixed(1) + '%';
-                document.getElementById('xgb-f1').innerText = (xgb["F1-Score"] * 100).toFixed(1) + '%';
-                document.getElementById('xgb-auc').innerText = xgb["ROC-AUC"].toFixed(3);
-                document.getElementById('xgb-prec').innerText = (xgb.Precision * 100).toFixed(1) + '%';
+                if (document.getElementById('xgb-acc')) document.getElementById('xgb-acc').innerText = (xgb.Accuracy * 100).toFixed(1) + '%';
+                if (document.getElementById('xgb-f1')) document.getElementById('xgb-f1').innerText = (xgb["F1-Score"] * 100).toFixed(1) + '%';
+                if (document.getElementById('xgb-auc')) document.getElementById('xgb-auc').innerText = xgb["ROC-AUC"].toFixed(3);
+                if (document.getElementById('xgb-prec')) document.getElementById('xgb-prec').innerText = (xgb.Precision * 100).toFixed(1) + '%';
                 
                 // CM
-                document.getElementById('xgb-cm-tp').innerText = xgb.Confusion_Matrix.TP;
-                document.getElementById('xgb-cm-fp').innerText = xgb.Confusion_Matrix.FP;
-                document.getElementById('xgb-cm-fn').innerText = xgb.Confusion_Matrix.FN;
-                document.getElementById('xgb-cm-tn').innerText = xgb.Confusion_Matrix.TN;
+                if (xgb.Confusion_Matrix) {
+                    if (document.getElementById('xgb-cm-tp')) document.getElementById('xgb-cm-tp').innerText = xgb.Confusion_Matrix.TP;
+                    if (document.getElementById('xgb-cm-fp')) document.getElementById('xgb-cm-fp').innerText = xgb.Confusion_Matrix.FP;
+                    if (document.getElementById('xgb-cm-fn')) document.getElementById('xgb-cm-fn').innerText = xgb.Confusion_Matrix.FN;
+                    if (document.getElementById('xgb-cm-tn')) document.getElementById('xgb-cm-tn').innerText = xgb.Confusion_Matrix.TN;
+                }
                 
                 // Best hyperparameters
                 if (xgb.Best_Params) {
-                    document.getElementById('xgb-tuning-card').style.display = 'block';
-                    document.getElementById('xgb-lr-param').innerText = xgb.Best_Params.learning_rate;
-                    document.getElementById('xgb-depth-param').innerText = xgb.Best_Params.max_depth;
-                    document.getElementById('xgb-est-param').innerText = xgb.Best_Params.n_estimators;
+                    const tuningCard = document.getElementById('xgb-tuning-card');
+                    if (tuningCard) tuningCard.style.display = 'block';
+                    if (document.getElementById('xgb-lr-param')) document.getElementById('xgb-lr-param').innerText = xgb.Best_Params.learning_rate;
+                    if (document.getElementById('xgb-depth-param')) document.getElementById('xgb-depth-param').innerText = xgb.Best_Params.max_depth;
+                    if (document.getElementById('xgb-est-param')) document.getElementById('xgb-est-param').innerText = xgb.Best_Params.n_estimators;
                 }
                 
                 // Feature importances
