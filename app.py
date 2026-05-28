@@ -1,21 +1,18 @@
 import os
 import json
-import pandas as pd
 import numpy as np
-import joblib
 import io
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 from PIL import Image
 import google.generativeai as genai
-from train import train_and_evaluate
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 CORS(app)
 
 MODELS_DIR = os.path.join(os.path.dirname(__file__), "models")
 
-# Try to configure Gemini from environment variable
+# Gemini API 설정 (환경변수)
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
@@ -26,140 +23,362 @@ def index():
 
 @app.route("/api/metrics")
 def get_metrics():
+    """학습된 모델의 평가 지표(Metrics)를 반환합니다."""
     metrics_path = os.path.join(MODELS_DIR, "metrics.json")
     if not os.path.exists(metrics_path):
-        try:
-            metrics = train_and_evaluate()
-            return jsonify(metrics)
-        except Exception as e:
-            return jsonify({"error": f"Failed to auto-train: {str(e)}"}), 500
+        return jsonify({"error": "모델 지표 파일을 찾을 수 없습니다. 먼저 모델을 학습시켜주세요."}), 404
             
     with open(metrics_path, "r", encoding="utf-8") as f:
         metrics = json.load(f)
     return jsonify(metrics)
 
+@app.route("/api/champions")
+def get_champions():
+    """Riot API에서 챔피언 데이터를 가져옵니다."""
+    import urllib.request
+    url = "https://ddragon.leagueoflegends.com/cdn/14.22.1/data/ko_KR/champion.json"
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=3) as response:
+            data = json.loads(response.read().decode('utf-8'))
+            champions_dict = data.get("data", {})
+            champions_list = []
+            for c_id, c_data in champions_dict.items():
+                champions_list.append({
+                    "id": c_id,
+                    "name": c_data.get("name"),
+                    "title": c_data.get("title"),
+                    "image": f"https://ddragon.leagueoflegends.com/cdn/14.22.1/img/champion/{c_id}.png"
+                })
+            champions_list.sort(key=lambda x: x["name"])
+            return jsonify(champions_list)
+    except Exception as e:
+        from backend.champion_data import CHAMPION_NAMES_KR
+        champions_list = []
+        for c_id, name_kr in CHAMPION_NAMES_KR.items():
+            champions_list.append({
+                "id": c_id,
+                "name": name_kr,
+                "title": "",
+                "image": f"https://ddragon.leagueoflegends.com/cdn/14.22.1/img/champion/{c_id}.png"
+            })
+        champions_list.sort(key=lambda x: x["name"])
+        return jsonify(champions_list)
+
+def run_model_inference(model_name, feature_dict, feature_order):
+    """
+    주어진 feature_dict와 feature_order를 바탕으로 특정 모델의 승률(블루팀 승리 확률)을 계산합니다.
+    """
+    input_values = [feature_dict.get(f, 0.0) for f in feature_order]
+    
+    if model_name == "Logistic Regression":
+        from models.logistic_regression_code import score as lr_score
+        scaler_file = os.path.join(MODELS_DIR, "scaler.json")
+        with open(scaler_file, "r") as f:
+            scaler_data = json.load(f)
+            scaler_mean = scaler_data["mean"]
+            scaler_scale = scaler_data["scale"]
+        
+        X_scaled = [(x_i - mean_i) / (scale_i if scale_i != 0 else 1) for x_i, mean_i, scale_i in zip(input_values, scaler_mean, scaler_scale)]
+        margin = lr_score(X_scaled)
+        return 1.0 / (1.0 + np.exp(-margin))
+        
+    elif model_name == "Random Forest":
+        from models.random_forest_code import score as rf_score
+        proba = rf_score(input_values)
+        return proba[1]
+        
+    elif model_name == "XGBoost":
+        from models.xgboost_code import score as xgb_score
+        proba = xgb_score(input_values)
+        return proba[1]
+    else:
+        raise ValueError(f"Invalid model name: {model_name}")
+
+def calculate_ml_composition_score(model_name, blue_champs, red_champs, feature_order):
+    """
+    모든 경제적 지표를 동등(격차 0)하게 맞춘 상태에서 챔피언 조합만으로 얻어지는 모델 예측 승률을
+    해당 알고리즘의 조합 점수(Composition Score)로 계산합니다.
+    """
+    # 1. 중립 경제 피처 구축 (input_data={} 전달 시 기본값 탑재)
+    feature_dict = build_lane_features({})
+    
+    # 2. 챔피언 태그 및 조합 분석 적용
+    from backend.champion_data import get_champion_tags, determine_composition
+    
+    # 빈 슬롯 채우기 (최대 5명)
+    blue_champs_full = list(blue_champs)
+    red_champs_full = list(red_champs)
+    while len(blue_champs_full) < 5: blue_champs_full.append("")
+    while len(red_champs_full) < 5: red_champs_full.append("")
+    
+    blue_tags = get_champion_tags(blue_champs_full)
+    red_tags = get_champion_tags(red_champs_full)
+    blue_comp_name = determine_composition(blue_tags)
+    red_comp_name = determine_composition(red_tags)
+    
+    roles = ['top', 'jungle', 'middle', 'bottom', 'utility']
+    for i, role in enumerate(roles):
+        feature_dict[f'blue_{role}_tag_{blue_tags[i]}'] = 1.0
+        feature_dict[f'red_{role}_tag_{red_tags[i]}'] = 1.0
+        
+    feature_dict[f'blue_comp_{blue_comp_name}'] = 1.0
+    feature_dict[f'red_comp_{red_comp_name}'] = 1.0
+    
+    # 3. 챔피언 멀티핫 피처 탑재
+    for champ in blue_champs_full:
+        if champ:
+            feature_dict[f'blue_champion_{champ}'] = 1.0
+    for champ in red_champs_full:
+        if champ:
+            feature_dict[f'red_champion_{champ}'] = 1.0
+            
+    # 4. 모델 추론
+    try:
+        blue_prob = run_model_inference(model_name, feature_dict, feature_order)
+        return float(blue_prob)
+    except Exception:
+        return 0.5
+
+def calculate_dragon_gold_value(model_name, full_input, feature_order):
+    """
+    편미분을 이용해 드래곤 1마리가 승률에 미치는 영향을 골드 가치로 환산합니다.
+    """
+    def get_prob(inp_dict):
+        try:
+            return run_model_inference(model_name, inp_dict, feature_order)
+        except Exception:
+            return 0.5
+
+    # 1. 현재 승률
+    p_current = get_prob(full_input)
+    
+    # 2. 드래곤 1마리 추가 시 승률
+    current_dragons = full_input.get('blue_dragons', 0)
+    dragons_changed = current_dragons + 1 if current_dragons < 2 else current_dragons - 1
+    direction = 1 if current_dragons < 2 else -1
+    
+    inp_dragon_changed = full_input.copy()
+    inp_dragon_changed['blue_dragons'] = dragons_changed
+    p_dragon_changed = get_prob(inp_dragon_changed)
+    
+    # 3. 골드 격차 100당 승률 변화량 계산 (Top/Mid/Bot 등 라인별 골드 증감 적용)
+    # 단순화를 위해 전체 라인에 균등하게 분배
+    inp_gold_plus = full_input.copy()
+    gold_increment = 100.0 / 5.0
+    for role in ['top', 'jungle', 'middle', 'bottom', 'utility']:
+        inp_gold_plus[f'blue_{role}_gold'] += gold_increment
+        inp_gold_plus[f'{role}_gold_diff'] += gold_increment
+        
+    p_gold_plus = get_prob(inp_gold_plus)
+    
+    inp_gold_minus = full_input.copy()
+    for role in ['top', 'jungle', 'middle', 'bottom', 'utility']:
+        inp_gold_minus[f'blue_{role}_gold'] -= gold_increment
+        inp_gold_minus[f'{role}_gold_diff'] -= gold_increment
+        
+    p_gold_minus = get_prob(inp_gold_minus)
+    
+    dp_dgold = (p_gold_plus - p_gold_minus) / 200.0
+    
+    if abs(dp_dgold) < 1e-7:
+        return 1500.0
+            
+    dragon_gold_value = ((p_dragon_changed - p_current) / direction) / dp_dgold
+    
+    if dragon_gold_value < 0 or dragon_gold_value > 5000 or np.isnan(dragon_gold_value):
+        return 1500.0
+            
+    return float(dragon_gold_value)
+
+def build_lane_features(input_data):
+    """
+    팀 합산 지표를 라인별 지표로 분배하고 원핫 인코딩 피처를 생성합니다.
+    """
+    roles = ['top', 'jungle', 'middle', 'bottom', 'utility']
+    
+    # 역할별 골드/CS/킬 분배 비율 (경험적 추정치)
+    ratios = {
+        'gold': [0.22, 0.19, 0.23, 0.24, 0.12],
+        'cs': [0.25, 0.15, 0.27, 0.28, 0.05],
+        'kills': [0.20, 0.25, 0.25, 0.25, 0.05],
+        'deaths': [0.22, 0.18, 0.22, 0.20, 0.18]
+    }
+    
+    out = {}
+    
+    # 1. 오브젝트 지표 직접 매핑
+    out['blue_dragons'] = float(input_data.get('blueDragons', 0))
+    out['blue_heralds'] = float(input_data.get('blueHeralds', 0))
+    out['blue_towers'] = float(input_data.get('blueTowersDestroyed', 0))
+    out['blue_kills'] = float(input_data.get('blueKills', 0))
+    out['blue_firstBlood'] = float(input_data.get('blueFirstBlood', 0))
+    out['blue_voidgrubs'] = float(input_data.get('blueEliteMonsters', 0)) # 유충은 대략적으로 매핑
+    
+    out['red_dragons'] = float(input_data.get('redDragons', 0))
+    out['red_heralds'] = float(input_data.get('redHeralds', 0))
+    out['red_towers'] = float(input_data.get('redTowersDestroyed', 0))
+    out['red_kills'] = float(input_data.get('redKills', 0))
+    out['red_voidgrubs'] = float(input_data.get('redEliteMonsters', 0))
+    
+    # 2. 라인별 수치 지표 분배
+    blue_gold = float(input_data.get('blueTotalGold', 16500))
+    red_gold = float(input_data.get('redTotalGold', 16500))
+    
+    blue_cs = float(input_data.get('blueTotalMinionsKilled', 210))
+    red_cs = float(input_data.get('redTotalMinionsKilled', 210))
+    
+    blue_k = float(input_data.get('blueKills', 5))
+    red_k = float(input_data.get('redKills', 5))
+    
+    blue_d = float(input_data.get('blueDeaths', 5))
+    red_d = float(input_data.get('redDeaths', 5))
+    
+    for i, role in enumerate(roles):
+        # 블루팀
+        out[f'blue_{role}_gold'] = blue_gold * ratios['gold'][i]
+        out[f'blue_{role}_cs'] = blue_cs * ratios['cs'][i]
+        out[f'blue_{role}_kills'] = blue_k * ratios['kills'][i]
+        out[f'blue_{role}_deaths'] = blue_d * ratios['deaths'][i]
+        
+        # 레드팀
+        out[f'red_{role}_gold'] = red_gold * ratios['gold'][i]
+        out[f'red_{role}_cs'] = red_cs * ratios['cs'][i]
+        out[f'red_{role}_kills'] = red_k * ratios['kills'][i]
+        out[f'red_{role}_deaths'] = red_d * ratios['deaths'][i]
+        
+        # 격차 (Diff)
+        out[f'{role}_gold_diff'] = out[f'blue_{role}_gold'] - out[f'red_{role}_gold']
+        
+    return out
+
 @app.route("/api/predict", methods=["POST"])
 def predict_match():
+    """선택된 모델과 입력 데이터를 바탕으로 승률 예측을 수행합니다."""
     input_data = request.json
     model_name = request.args.get("model_name", "XGBoost")
     
-    model_key = model_name.lower().replace(" ", "_")
-    model_file = os.path.join(MODELS_DIR, f"{model_key}.joblib")
-    scaler_file = os.path.join(MODELS_DIR, "scaler.joblib")
+    # 1. 챔피언 데이터 파싱 및 조합 계산
+    blue_champs = input_data.get('blue_champions', ["", "", "", "", ""])
+    red_champs = input_data.get('red_champions', ["", "", "", "", ""])
     
-    # Fallback to Logistic Regression if XGBoost not present
-    if not os.path.exists(model_file):
-        if model_key == "xgboost":
-            model_key = "logistic_regression"
-            model_file = os.path.join(MODELS_DIR, "logistic_regression.joblib")
-            model_name = "Logistic Regression"
-            
-    if not os.path.exists(model_file) or not os.path.exists(scaler_file):
-        try:
-            train_and_evaluate()
-        except Exception as e:
-            return jsonify({"error": f"Failed to auto-train: {str(e)}"}), 500
-            
-    try:
-        model = joblib.load(model_file)
-        scaler = joblib.load(scaler_file)
-    except Exception as e:
-        return jsonify({"error": f"Error loading models: {str(e)}"}), 500
+    # 빈 슬롯 채우기 (최대 5명)
+    while len(blue_champs) < 5: blue_champs.append("")
+    while len(red_champs) < 5: red_champs.append("")
+    
+    # 챔피언 태그 및 조합 분석
+    from backend.champion_data import get_champion_tags, determine_composition
+    
+    # 각 라인별 태그 추출
+    blue_tags = get_champion_tags(blue_champs)
+    red_tags = get_champion_tags(red_champs)
+    
+    # 조합 이름 판별
+    blue_comp_name = determine_composition(blue_tags)
+    red_comp_name = determine_composition(red_tags)
+    
+    # 2. 숫자형 지표 구축 (합산 지표를 라인별로 분배)
+    feature_dict = build_lane_features(input_data)
+    
+    # 3. 원핫 인코딩 피처 추가 (기본 0, 일치하면 1)
+    roles = ['top', 'jungle', 'middle', 'bottom', 'utility']
+    for i, role in enumerate(roles):
+        b_tag = blue_tags[i]
+        r_tag = red_tags[i]
+        feature_dict[f'blue_{role}_tag_{b_tag}'] = 1.0
+        feature_dict[f'red_{role}_tag_{r_tag}'] = 1.0
         
-    # Feature engineering (Auto-alignment)
-    input_dict = input_data.copy()
-    
-    # Matching deaths to kills
-    input_dict['blueDeaths'] = input_data.get('redKills', 0)
-    input_dict['redDeaths'] = input_data.get('blueKills', 0)
-    
-    # Gold/Exp Diffs
-    input_dict['blueGoldDiff'] = input_dict.get('blueTotalGold', 16500) - input_dict.get('redTotalGold', 16500)
-    input_dict['redGoldDiff'] = input_dict.get('redTotalGold', 16500) - input_dict.get('blueTotalGold', 16500)
-    input_dict['blueExperienceDiff'] = input_dict.get('blueTotalExperience', 18000) - input_dict.get('redTotalExperience', 18000)
-    input_dict['redExperienceDiff'] = input_dict.get('redTotalExperience', 18000) - input_dict.get('blueTotalExperience', 18000)
-    
-    # Rates
-    input_dict['blueCSPerMin'] = input_dict.get('blueTotalMinionsKilled', 210) / 10.0
-    input_dict['redCSPerMin'] = input_dict.get('redTotalMinionsKilled', 210) / 10.0
-    input_dict['blueGoldPerMin'] = input_dict.get('blueTotalGold', 16500) / 10.0
-    input_dict['redGoldPerMin'] = input_dict.get('redTotalGold', 16500) / 10.0
-    
-    # Objectives
-    input_dict['blueEliteMonsters'] = input_dict.get('blueDragons', 0) + input_dict.get('blueHeralds', 0)
-    input_dict['redEliteMonsters'] = input_dict.get('redDragons', 0) + input_dict.get('redHeralds', 0)
-    
-    # First Blood exclusive
-    input_dict['redFirstBlood'] = 1 if input_dict.get('blueFirstBlood') == 0 else 0
+    feature_dict[f'blue_comp_{blue_comp_name}'] = 1.0
+    feature_dict[f'red_comp_{red_comp_name}'] = 1.0
 
-    # Ensure all required features are present with default values
-    feature_defaults = {
-        'blueWardsPlaced': 15, 'blueWardsDestroyed': 2, 'blueFirstBlood': 1, 'blueKills': 5, 'blueDeaths': 5, 'blueAssists': 5,
-        'blueEliteMonsters': 0, 'blueDragons': 0, 'blueHeralds': 0, 'blueTowersDestroyed': 0, 'blueTotalGold': 16500, 'blueAvgLevel': 6.8,
-        'blueTotalExperience': 18000, 'blueTotalMinionsKilled': 210, 'blueTotalJungleMinionsKilled': 50, 'blueGoldDiff': 0,
-        'blueExperienceDiff': 0, 'blueCSPerMin': 21.0, 'blueGoldPerMin': 1650.0,
-        'redWardsPlaced': 15, 'redWardsDestroyed': 2, 'redFirstBlood': 0, 'redKills': 5, 'redDeaths': 5, 'redAssists': 5,
-        'redEliteMonsters': 0, 'redDragons': 0, 'redHeralds': 0, 'redTowersDestroyed': 0, 'redTotalGold': 16500, 'redAvgLevel': 6.8,
-        'redTotalExperience': 18000, 'redTotalMinionsKilled': 210, 'redTotalJungleMinionsKilled': 50, 'redGoldDiff': 0,
-        'redExperienceDiff': 0, 'redCSPerMin': 21.0, 'redGoldPerMin': 1650.0
-    }
-    
-    full_input = feature_defaults.copy()
-    full_input.update(input_dict)
-    
-    feature_order = [
-        'blueWardsPlaced', 'blueWardsDestroyed', 'blueFirstBlood', 'blueKills', 'blueDeaths', 'blueAssists',
-        'blueEliteMonsters', 'blueDragons', 'blueHeralds', 'blueTowersDestroyed', 'blueTotalGold', 'blueAvgLevel',
-        'blueTotalExperience', 'blueTotalMinionsKilled', 'blueTotalJungleMinionsKilled', 'blueGoldDiff',
-        'blueExperienceDiff', 'blueCSPerMin', 'blueGoldPerMin',
-        'redWardsPlaced', 'redWardsDestroyed', 'redFirstBlood', 'redKills', 'redDeaths', 'redAssists',
-        'redEliteMonsters', 'redDragons', 'redHeralds', 'redTowersDestroyed', 'redTotalGold', 'redAvgLevel',
-        'redTotalExperience', 'redTotalMinionsKilled', 'redTotalJungleMinionsKilled', 'redGoldDiff',
-        'redExperienceDiff', 'redCSPerMin', 'redGoldPerMin'
-    ]
+    # 챔피언 멀티핫 피처 추가 (기본 0, 일치하면 1)
+    for champ in blue_champs:
+        if champ:
+            feature_dict[f'blue_champion_{champ}'] = 1.0
+    for champ in red_champs:
+        if champ:
+            feature_dict[f'red_champion_{champ}'] = 1.0
+
+    # 4. 저장된 Feature 순서에 맞게 입력 배열 생성
+    feature_order = []
+    feature_names_file = os.path.join(MODELS_DIR, "feature_names.json")
+    if os.path.exists(feature_names_file):
+        try:
+            with open(feature_names_file, "r", encoding="utf-8") as f:
+                feature_order = json.load(f)
+        except Exception:
+            pass
+            
+    if not feature_order:
+        return jsonify({"error": "모델 학습 후 feature_names.json 파일이 필요합니다."}), 500
+        
+    # 입력 배열 (Order 기반으로 매핑, 없는 피처는 0으로 처리)
+    input_values = [feature_dict.get(f, 0.0) for f in feature_order]
     
     try:
-        df_input = pd.DataFrame([full_input])[feature_order]
-        df_input_scaled = scaler.transform(df_input)
+        # 모델 추론 수행
+        try:
+            blue_win_prob = run_model_inference(model_name, feature_dict, feature_order)
+        except ValueError as ve:
+            return jsonify({"error": str(ve)}), 400
+            
+        prediction = 1 if blue_win_prob >= 0.5 else 0
         
-        blue_win_probability = model.predict_proba(df_input_scaled)[0][1]
-        prediction = int(model.predict(df_input_scaled)[0])
+        # 드래곤 가치 편미분 계산
+        dragon_val = calculate_dragon_gold_value(model_name, feature_dict, feature_order)
+        
+        # 챔피언 조합 점수 연산 (선택한 머신러닝 모델 기반)
+        blue_comp_score = calculate_ml_composition_score(model_name, blue_champs, red_champs, feature_order)
+        red_comp_score = 1.0 - blue_comp_score
+        
+        # UI 시너지/카운터 텍스트 바인딩을 위해 기존 분석기도 동시 호출
+        from backend.champion_data import calculate_composition_scores
+        comp_details = calculate_composition_scores(blue_champs, red_champs)
         
         return jsonify({
             "model_used": model_name,
             "prediction": prediction,
             "winner": "Blue" if prediction == 1 else "Red",
-            "blue_win_probability": float(blue_win_probability),
-            "red_win_probability": float(1.0 - blue_win_probability)
+            "blue_win_probability": float(blue_win_prob),
+            "red_win_probability": float(1.0 - blue_win_prob),
+            "dragon_gold_value": float(dragon_val),
+            "blue_comp_score": float(blue_comp_score),
+            "red_comp_score": float(red_comp_score),
+            "blue_synergies": comp_details["blue_synergies"],
+            "red_synergies": comp_details["red_synergies"],
+            "counters": comp_details["counters"]
         })
     except Exception as e:
-        return jsonify({"error": f"Prediction failed: {str(e)}"}), 500
+        return jsonify({"error": f"예측 중 오류 발생: {str(e)}"}), 500
 
 @app.route("/api/train", methods=["POST"])
 def train_models():
+    """모델 재학습 요청 API"""
     try:
+        from train import train_and_evaluate
         metrics = train_and_evaluate()
         return jsonify({
             "status": "success",
-            "message": "Models trained successfully.",
+            "message": "모델 학습 완료",
             "metrics": metrics
         })
     except Exception as e:
-        return jsonify({"error": f"Failed to train models: {str(e)}"}), 500
+        return jsonify({"error": f"로컬 환경에서만 지원됩니다: {str(e)}"}), 500
 
 @app.route("/api/parse-scoreboard", methods=["POST"])
 def parse_scoreboard():
+    """Gemini Vision 기반 스코어보드 이미지 분석 API"""
     if 'file' not in request.files:
-        return jsonify({"error": "No file uploaded"}), 400
+        return jsonify({"error": "파일이 업로드되지 않았습니다."}), 400
     
     file = request.files['file']
     try:
         image = Image.open(file.stream)
     except Exception as e:
-        return jsonify({"error": f"Invalid image: {str(e)}"}), 400
+        return jsonify({"error": f"이미지 인식 실패: {str(e)}"}), 400
         
     if not GEMINI_API_KEY:
-        # Demo data fallback
+        # 데모 응답 (키가 없을 경우)
         return jsonify({
             "is_mocked": True,
             "blueKills": 9, "blueDeaths": 4, "blueAssists": 6,
@@ -177,8 +396,8 @@ def parse_scoreboard():
         })
     
     try:
-        prompt = "Analyze this LoL scoreboard at 10m and extract stats (KDA, CS, Level, Gold, Exp, Wards, Monsters) for Blue and Red teams. Return valid JSON."
-        model = genai.GenerativeModel("gemini-2.0-flash") # Use latest flash
+        prompt = "이 리그 오브 레전드 스코어보드를 분석하여 블루팀과 레드팀의 총 킬, 데스, 골드, CS, 와드, 드래곤, 전령 정보를 JSON 형태로 추출해주세요."
+        model = genai.GenerativeModel("gemini-2.0-flash")
         response = model.generate_content([image, prompt], generation_config={"response_mime_type": "application/json"})
         parsed_data = json.loads(response.text.strip())
         parsed_data["is_mocked"] = False
