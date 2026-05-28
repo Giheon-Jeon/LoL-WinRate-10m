@@ -123,6 +123,7 @@ py -m venv .venv
 │   ├── 📄 feature_names.json   # 예측 시 사용되는 피처의 순서 정보 보장용
 │   ├── 📄 scaler.json          # 스케일링 평균/분산 정보의 JSON 버전 백업
 │   ├── 📄 metrics.json         # 각 모델의 성능 평가지표 (Accuracy, F1, ROC-AUC, CM 등) 기록
+│   ├── 📄 champion_ml_win_rates.json # 3대 알고리즘별 챔피언 기여도(동적 승률) 기록 파일
 │   ├── 📄 logistic_regression_code.py # m2cgen 컴파일된 순수 파이썬 모델 (Logistic Regression)
 │   ├── 📄 random_forest_code.py # m2cgen 컴파일된 순수 파이썬 모델 (Random Forest)
 │   └── 📄 xgboost_code.py      # m2cgen 컴파일된 순수 파이썬 모델 (XGBoost)

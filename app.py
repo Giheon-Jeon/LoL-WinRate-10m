@@ -135,10 +135,25 @@ CHAMPION_NAMES_KR = {
 def get_champion_name_kr(champ_id):
     return CHAMPION_NAMES_KR.get(champ_id, champ_id)
 
-def calculate_composition_scores(blue_champions, red_champions):
+def calculate_composition_scores(blue_champions, red_champions, model_name="XGBoost"):
     """5v5 밴픽 조합 기반 지표 평가"""
-    blue_bases = [CHAMPION_BASE_WIN_RATES.get(c, 0.50) for c in blue_champions if c]
-    red_bases = [CHAMPION_BASE_WIN_RATES.get(c, 0.50) for c in red_champions if c]
+    # 머신러닝 모델 기반 동적 승률 로드
+    ml_rates = {}
+    ml_rates_path = os.path.join(MODELS_DIR, "champion_ml_win_rates.json")
+    if os.path.exists(ml_rates_path):
+        try:
+            with open(ml_rates_path, "r", encoding="utf-8") as f:
+                ml_rates = json.load(f)
+        except Exception:
+            pass
+            
+    # 선택된 모델 전용 승률 테이블 사용 (로딩 실패 또는 키 부재 시 하드코딩 폴백)
+    win_rates_table = ml_rates.get(model_name, CHAMPION_BASE_WIN_RATES)
+    if not win_rates_table:
+        win_rates_table = CHAMPION_BASE_WIN_RATES
+
+    blue_bases = [win_rates_table.get(c, 0.50) for c in blue_champions if c]
+    red_bases = [win_rates_table.get(c, 0.50) for c in red_champions if c]
     
     blue_base_avg = sum(blue_bases) / len(blue_bases) if blue_bases else 0.50
     red_base_avg = sum(red_bases) / len(red_bases) if red_bases else 0.50
@@ -564,8 +579,8 @@ def predict_match():
         blue_comp_score = calculate_ml_composition_score(model_name, blue_champs, red_champs, feature_order)
         red_comp_score = 1.0 - blue_comp_score
         
-        # UI 시너지/카운터 텍스트 바인딩 연산
-        comp_details = calculate_composition_scores(blue_champs, red_champs)
+        # UI 시너지/카운터 텍스트 바인딩 연산 (선택한 모델의 동적 승률 적용)
+        comp_details = calculate_composition_scores(blue_champs, red_champs, model_name=model_name)
         
         return jsonify({
             "model_used": model_name,
