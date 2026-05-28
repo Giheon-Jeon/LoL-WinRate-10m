@@ -236,13 +236,74 @@ def calculate_composition_scores(blue_champions, red_champions, model_name="XGBo
         "counters": counters_detected
     }
 
-CHAMPION_TAGS = {
-    "Aatrox": "Fighter", "Fiora": "Fighter", "Jax": "Fighter", "Malphite": "Tank", "Ornn": "Tank",
-    "LeeSin": "Fighter", "Graves": "Marksman", "Viego": "Fighter", "KhaZix": "Assassin",
-    "Ahri": "Mage", "Yasuo": "Fighter", "Zed": "Assassin", "Syndra": "Mage",
-    "Ezreal": "Marksman", "Jinx": "Marksman", "Ashe": "Marksman", "Kaisa": "Marksman",
-    "Thresh": "Support", "Lulu": "Support", "Leona": "Tank", "Nautilus": "Tank"
-}
+CHAMPION_TAGS = {}
+
+def initialize_champion_tags():
+    global CHAMPION_TAGS
+    fallback_tags = {
+        "Aatrox": "Fighter", "Ahri": "Mage", "Akali": "Assassin", "Akshan": "Marksman",
+        "Alistar": "Tank", "Amumu": "Tank", "Anivia": "Mage", "Annie": "Mage",
+        "Aphelios": "Marksman", "Ashe": "Marksman", "AurelionSol": "Mage", "Azir": "Mage",
+        "Bard": "Support", "Belveth": "Fighter", "Blitzcrank": "Tank", "Brand": "Mage",
+        "Braum": "Support", "Briar": "Fighter", "Caitlyn": "Marksman", "Camille": "Fighter",
+        "Cassiopeia": "Mage", "Chogath": "Tank", "Corki": "Marksman", "Darius": "Fighter",
+        "Diana": "Fighter", "DrMundo": "Fighter", "Draven": "Marksman",
+        "Ekko": "Assassin", "Elise": "Mage", "Evelynn": "Assassin", "Ezreal": "Marksman",
+        "FiddleSticks": "Mage", "Fiora": "Fighter", "Fizz": "Assassin", "Galio": "Tank",
+        "Gangplank": "Fighter", "Garen": "Fighter", "Gnar": "Fighter", "Gragas": "Fighter",
+        "Graves": "Marksman", "Gwen": "Fighter", "Hecarim": "Fighter", "Heimerdinger": "Mage",
+        "Hwei": "Mage", "Illaoi": "Fighter", "Irelia": "Fighter", "Ivern": "Support",
+        "Janna": "Support", "JarvanIV": "Fighter", "Jax": "Fighter", "Jayce": "Fighter",
+        "Jhin": "Marksman", "Jinx": "Marksman", "KSante": "Tank", "Kaisa": "Marksman",
+        "Kalista": "Marksman", "Karma": "Mage", "Karthus": "Mage", "Kassadin": "Assassin",
+        "Katarina": "Assassin", "Kayle": "Fighter", "Kayn": "Fighter", "Kennen": "Mage",
+        "Khazix": "Assassin", "Kindred": "Marksman", "Kled": "Fighter", "KogMaw": "Marksman",
+        "Leblanc": "Assassin", "LeeSin": "Fighter", "Leona": "Tank", "Lillia": "Fighter",
+        "Lissandra": "Mage", "Lucian": "Marksman", "Lulu": "Support", "Lux": "Mage",
+        "Malphite": "Tank", "Malzahar": "Mage", "Maokai": "Tank", "MasterYi": "Assassin",
+        "Milio": "Support", "MissFortune": "Marksman", "MonkeyKing": "Fighter", "Mordekaiser": "Fighter",
+        "Morgana": "Mage", "Naafiri": "Assassin", "Nami": "Support", "Nasus": "Fighter",
+        "Nautilus": "Tank", "Neeko": "Mage", "Nidalee": "Assassin", "Nilah": "Fighter",
+        "Nocturne": "Assassin", "Nunu": "Tank", "Olaf": "Fighter", "Orianna": "Mage",
+        "Ornn": "Tank", "Pantheon": "Fighter", "Poppy": "Tank", "Pyke": "Assassin",
+        "Qiyana": "Assassin", "Quinn": "Marksman", "Rakan": "Support", "Rammus": "Tank",
+        "RekSai": "Fighter", "Rell": "Tank", "Renata": "Support", "Renekton": "Fighter",
+        "Rengar": "Assassin", "Riven": "Fighter", "Rumble": "Fighter", "Ryze": "Mage",
+        "Samira": "Marksman", "Sejuani": "Tank", "Senna": "Marksman", "Seraphine": "Mage",
+        "Sett": "Fighter", "Shaco": "Assassin", "Shen": "Tank", "Shyvana": "Fighter",
+        "Singed": "Tank", "Sion": "Tank", "Sivir": "Marksman", "Skarner": "Fighter",
+        "Smolder": "Marksman", "Sona": "Support", "Soraka": "Support", "Swain": "Mage",
+        "Sylas": "Mage", "Syndra": "Mage", "TahmKench": "Support", "Taliyah": "Mage",
+        "Talon": "Assassin", "Taric": "Support", "Teemo": "Marksman", "Thresh": "Support",
+        "Tristana": "Marksman", "Trundle": "Fighter", "Tryndamere": "Fighter", "TwistedFate": "Mage",
+        "Twitch": "Marksman", "Udyr": "Fighter", "Urgot": "Fighter", "Varus": "Marksman",
+        "Vayne": "Marksman", "Veigar": "Mage", "Velkoz": "Mage", "Vex": "Mage",
+        "Vi": "Fighter", "Viego": "Fighter", "Viktor": "Mage", "Vladimir": "Mage",
+        "Volibear": "Fighter", "Warwick": "Fighter", "Xayah": "Marksman", "Xerath": "Mage",
+        "XinZhao": "Fighter", "Yasuo": "Fighter", "Yone": "Assassin", "Yorick": "Fighter",
+        "Yuumi": "Support", "Zac": "Tank", "Zed": "Assassin", "Zeri": "Marksman",
+        "Ziggs": "Mage", "Zilean": "Support", "Zoe": "Mage", "Zyra": "Mage"
+    }
+    CHAMPION_TAGS.update(fallback_tags)
+    
+    # Riot Data Dragon에서 동적 가져오기
+    import urllib.request
+    url = "https://ddragon.leagueoflegends.com/cdn/14.22.1/data/ko_KR/champion.json"
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=3) as response:
+            data = json.loads(response.read().decode('utf-8'))
+            champions_dict = data.get("data", {})
+            for c_id, c_data in champions_dict.items():
+                c_tags = c_data.get("tags", [])
+                if c_tags:
+                    CHAMPION_TAGS[c_id] = c_tags[0]
+            print(f"Data Dragon에서 {len(champions_dict)}개 챔피언 태그 로드 성공.")
+    except Exception as e:
+        print(f"Data Dragon 태그 로드 실패 (폴백 사용): {str(e)}")
+
+# 태그 데이터 기동 시 사전 로드
+initialize_champion_tags()
 
 def get_champion_tags(champions_list):
     tags = []

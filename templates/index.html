@@ -2003,7 +2003,7 @@
     // Load Metrics from Backend and Update Dashboard Elements
     async function loadMetrics() {
         try {
-            const res = await fetch('/api/metrics');
+            const res = await fetch('/api/metrics?t=' + Date.now());
             const data = await res.json();
             
             if (data.error) {
