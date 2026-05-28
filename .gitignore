@@ -42,10 +42,10 @@ next-env.d.ts
 
 # python virtual environment
 .venv/
-backend/.venv/
 __pycache__/
 *.pyc
 
-# ML models (heavy binary weights)
-backend/models/*.joblib
+# ML models (heavy binary weights and results)
+models/*.joblib
+models/*.json
 
