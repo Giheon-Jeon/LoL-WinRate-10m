@@ -24,7 +24,7 @@ def train_and_evaluate():
     if not os.path.exists(data_path):
         raise FileNotFoundError(f"데이터셋을 찾을 수 없습니다: {data_path}")
             
-    df = pd.read_csv(data_path)
+    df = pd.read_csv(data_path, encoding="utf-8")
     
     # [1단계] 데이터 전처리
     # 불필요 컬럼 제거 (매치 ID)

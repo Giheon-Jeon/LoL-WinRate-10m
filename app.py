@@ -149,8 +149,15 @@ def calculate_composition_scores(blue_champions, red_champions, model_name="XGBo
         except Exception:
             pass
             
-    # 선택된 모델 전용 승률 테이블 사용 (로딩 실패 또는 키 부재 시 하드코딩 폴백)
-    win_rates_table = ml_rates.get(model_name, CHAMPION_BASE_WIN_RATES)
+    # 의사결정나무 계열 모델(XGBoost, Random Forest)의 경우 챔피언 개별 피처의 분할 빈도가 낮아 
+    # 승률이 플랫(flat)하게 학습되는 현상이 있습니다.
+    # 조합 점수의 동적 변동성과 직관적인 분석을 제공하기 위해, 
+    # 챔피언 개별 가중치가 잘 학습되는 Logistic Regression의 승률 테이블을 기본으로 사용합니다.
+    target_model = model_name
+    if model_name in ["XGBoost", "Random Forest"]:
+        target_model = "Logistic Regression"
+        
+    win_rates_table = ml_rates.get(target_model, CHAMPION_BASE_WIN_RATES)
     if not win_rates_table:
         win_rates_table = CHAMPION_BASE_WIN_RATES
 
@@ -666,12 +673,11 @@ def predict_match():
         # 드래곤 가치 편미분 계산
         dragon_val = calculate_dragon_gold_value(model_name, feature_dict, feature_order)
         
-        # 챔피언 조합 점수 연산 (선택한 머신러닝 모델 기반)
-        blue_comp_score = calculate_ml_composition_score(model_name, blue_champs, red_champs, feature_order)
-        red_comp_score = 1.0 - blue_comp_score
-        
         # UI 시너지/카운터 텍스트 바인딩 연산 (선택한 모델의 동적 승률 적용)
         comp_details = calculate_composition_scores(blue_champs, red_champs, model_name=model_name)
+        
+        blue_comp_score = comp_details["blue_score"]
+        red_comp_score = comp_details["red_score"]
         
         return jsonify({
             "model_used": model_name,
