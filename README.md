@@ -12,7 +12,7 @@ League of Legends 10분 지표를 기반으로 게임의 승패를 예측하는 
 ## 🛠️ 실행 방법
 
 ### 1. 가상환경 설정 및 패키지 설치
-(이미 `.venv_new` 폴더가 존재한다면 이 단계를 건너뛰어도 됩니다)
+(이미 `.venv` 폴더가 존재한다면 이 단계를 건너뛰어도 됩니다)
 ```bash
 py -m venv .venv
 ./.venv/Scripts/pip install flask flask-cors pandas joblib scikit-learn pillow google-generativeai xgboost
@@ -20,9 +20,8 @@ py -m venv .venv
 
 ### 2. 서버 실행
 ```bash
-./.venv_new/Scripts/python app.py
+./.venv/Scripts/python app.py
 ```
-*주의: 현재 프로젝트 폴더에 `.venv_new` 가상환경이 생성되어 있으므로 해당 경로를 사용해 주세요.*
 
 ### 3. 접속
 브라우저에서 다음 주소로 접속합니다:
@@ -32,11 +31,11 @@ py -m venv .venv
 - `app.py`: Flask 백엔드 서버 및 API 엔드포인트
 - `train.py`: ML 모델 학습 스크립트
 - `templates/index.html`: 통합 프론트엔드 UI
-- `models/`: 학습된 모델 파일 (.joblib)
+- `models/`: 학습된 모델 파일 (.joblib) 및 성능 리포트 (Git 추적 대상 제외)
 - `high_diamond_ranked_10min.csv`: 학습용 데이터셋
 
 ## 🧪 모델 학습 방법
 새로운 데이터로 모델을 다시 학습시키려면 다음 명령어를 실행하세요:
 ```bash
-./.venv_new/Scripts/python train.py
+./.venv/Scripts/python train.py
 ```
