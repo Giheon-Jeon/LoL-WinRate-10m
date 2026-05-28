@@ -1052,9 +1052,9 @@
     <div class="analysis-section">
         <h3 style="color: var(--gold-bright); margin-bottom: 1rem; border-left: 4px solid var(--gold-main); padding-left: 0.6rem; font-size: 1.2rem;">🔎 모델 정밀 분석 대시보드</h3>
         <div class="tabs-header">
-            <button class="tab-btn active" onclick="switchTab('lr')">로지스틱 회귀 (베이스라인)</button>
-            <button class="tab-btn" onclick="switchTab('rf')">랜덤 포레스트 (비교 모델)</button>
-            <button class="tab-btn" onclick="switchTab('xgb')">XGBoost (최적화 모델)</button>
+            <button class="tab-btn active" onclick="switchTab(this, 'lr')">로지스틱 회귀 (베이스라인)</button>
+            <button class="tab-btn" onclick="switchTab(this, 'rf')">랜덤 포레스트 (비교 모델)</button>
+            <button class="tab-btn" onclick="switchTab(this, 'xgb')">XGBoost (최적화 모델)</button>
         </div>
 
         <!-- 1) Logistic Regression Baseline Tab -->
@@ -1800,11 +1800,11 @@
     }
 
     // Tab Switching Logic
-    function switchTab(tabId) {
+    function switchTab(element, tabId) {
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
         document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
         
-        event.currentTarget.classList.add('active');
+        element.classList.add('active');
         document.getElementById('tab-' + tabId).classList.add('active');
         
         // Trigger resize on charts to render correctly in tabs
