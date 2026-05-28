@@ -56,9 +56,9 @@
 
 | 구분 | 모델 | 역할 | 주요 분석 요소 | 주요 성능 지표 (Test ACC) |
 | :--- | :--- | :--- | :--- | :--- |
-| **베이스라인** | **Logistic Regression** | 성능 기준점 + 피처별 계수 해석 | 드래곤 가치를 골드로 직접 환산 | **71.6%** |
-| **비교** | **Random Forest** | 중간 비교 기준 (의사결정 앙상블) | 비선형 관계 학습 및 중요도 비교 대조 | **71.9%** |
-| **최적화** | **XGBoost** | 최고 성능 달성 (GridSearchCV 최적 튜닝) | 부스팅 피처 기여도 분석 및 최강 성능 입증 | **71.7%** |
+| **베이스라인** | **Logistic Regression** | 성능 기준점 + 피처별 계수 해석 | 드래곤 가치를 골드로 직접 환산 | **79.2%** |
+| **비교** | **Random Forest** | 중간 비교 기준 (의사결정 앙상블) | 비선형 관계 학습 및 중요도 비교 대조 | **78.2%** |
+| **최적화** | **XGBoost** | 최고 성능 달성 (GridSearchCV 최적 튜닝) | 부스팅 피처 기여도 분석 및 최강 성능 입증 | **77.8%** |
 
 ---
 
@@ -190,67 +190,4 @@ graph TD
   
   1. **챔피언 피처 제거 및 태그/시너지 활용**: 챔피언 이름 피처는 카디널리티가 너무 높아 과적합(Overfitting)을 일으키고 피처 차원을 극도로 비대하게 만드므로 이를 제외하고, 포지션별 챔피언 태그(`Fighter`, `Mage`, `Tank` 등)와 팀 시너지(`comp`)만 원핫 인코딩하여 최적의 예측 성능과 해석 가능성을 유지합니다.
   2. **스케일링 정밀 분기**: 경사하강법 기반이자 계수 해석이 중요한 로지스틱 회귀에는 표준화(`StandardScaler`)를 적용하여 정밀 계수를 유도한 반면, 변수 분할 기준을 따르는 트리 기반 모델(RF, XGBoost)은 정보 왜곡을 막기 위해 원래의 비스케일링 원본 데이터를 공급하여 학습 정확도를 극대화했습니다.
-</details>��시보드 UI를 구성하는 마법공학 테마 SPA (Single Page Application)
-├── 📄 .gitignore               # Git 버전 관리에서 제외할 파일 및 폴더 (가상환경, 캐시 등)
-├── 📄 .vercelignore            # Vercel 클라우드 배포 시 번들 용량 최소화를 위해 무시할 파일 설정
-├── 📄 LICENSE                  # 프로젝트 라이선스 공시
-├── 📄 README.md                # 전체 프로젝트 소개 및 가이드 문서 (본 문서)
-├── 📄 app.py                   # Flask 메인 애플리케이션 (라우팅, API 서빙, 모델 추론 통합 뷰)
-├── 📄 high_diamond_ranked_10min.csv # 모델 학습 원천 데이터셋 (Kaggle 출처, 10분 구간 통계)
-├── 📄 requirements.txt         # 파이썬 패키지 의존성 목록 명세서 (Vercel 배포용)
-├── 📄 train.py                 # 전처리 및 모델 학습 파이프라인의 메인 실행 스크립트
-└── 📄 vercel.json              # Vercel 환경에서 Flask(Python) 서버리스 함수를 띄우기 위한 설정 파일
-```
 </details>
-
-### 주요 파일 역할 세부 설명
-
-* **`app.py`**: 서버의 심장부로 클라이언트와의 HTTP 통신을 담당합니다. `/api/predict` 등의 엔드포인트를 열어 전처리, 스케일링, 모델 추론 결과를 응답으로 반환합니다.
-* **`train.py`**: 다중공선성(Multi-collinearity)이 우려되는 피처를 제거하고, 모델 성격에 맞는 스케일링 분기 처리 및 하이퍼파라미터 튜닝을 거쳐 최종 `*.joblib` 파일들을 덤프합니다.
-* **`templates/index.html`**: UI/UX 디자인이 집약된 클라이언트 파일입니다. 차트 렌더링(Chart.js), 비동기 페칭, 스크린샷 업로드 파싱 등 모든 브라우저 상호작용이 여기서 이루어집니다.
-* **`vercel.json` & `.vercelignore`**: PaaS 플랫폼(Vercel)에 배포할 때, 정적 프론트엔드 호스팅이 아닌 Python Serverless Function으로 래핑(Wrapping)하기 위한 핵심 인프라 파일입니다. 번들 용량 한계(최대 250MB)를 피하기 위한 배포 효율화가 적용되어 있습니다.
-
----
-
-## 🤝 협업 및 자동화 규칙
-
-* **Git Flow 전략**: `main` 브랜치를 기준으로 프로덕션 배포를 관리하며 기능 단위 패치 및 핫픽스 처리
-* **Commit Convention**: 협업 커밋 시 이모지 컨벤션(`✨ Feat`, `🐛 Fix`, `⚡️ Perf`, `♻️ Refactor`)을 준수하여 가독성 강화
-* **Bundle Optimization (최적화)**: Vercel 서버리스 배포 제한 용량(250MB)에 맞추기 위해 사용하지 않는 대용량 코드나 불필요한 모델 이력을 클린업하여 콜드스타트 지연 현상 및 배포 실패율 개선
-
----
-
-## 📈 데이터 전처리 및 모델 학습 파이프라인
-
-정교한 분석과 신뢰도 높은 평가를 위해 `train.py` 파이프라인에 최신 머신러닝 베스트 프랙티스를 적용했습니다.
-
-```mermaid
-graph TD
-    A[high_diamond_ranked_10min.csv] --> B[불필요 gameId 컬럼 제거]
-    B --> C[레드팀 redGoldDiff / redExperienceDiff 제거로 다중공선성 방지]
-    C --> D[학습 및 테스트 데이터 분할 80:20 / stratify=y]
-    
-    D --> E{피처 스케일링 분기}
-    
-    E -- 로지스틱 회귀 전용 --> F[StandardScaler 표준화 적용]
-    F --> G[Logistic Regression 학습]
-    G --> H[계수 Coefficient 추출 및 드래곤 골드 가치 환산]
-    
-    E -- 트리 기반 모델 --> I[원본 비스케일링 데이터 활용]
-    I --> J[Random Forest 학습]
-    I --> K[XGBoost GridSearchCV 최적 파라미터 학습]
-    
-    J --> L[모델 평가 및 Confusion Matrix 저장]
-    K --> L
-    H --> L
-    
-    L --> M[models/metrics.json 저장 & joblib 모델 덤프]
-```
-
-<details open>
-  <summary><b>🔥 데이터 전처리 핵심 포인트</b></summary>
-  
-  1. **다중공선성 원천 배제**: 블루팀의 골드 차이와 경험치 차이는 레드팀의 값과 완벽히 대칭(부호만 반대)이므로, 다중공선성(Multicollinearity)으로 인한 회귀 모델의 불안정성을 완벽히 제거하기 위해 `redGoldDiff`, `redExperienceDiff`를 전처리 단계에서 전면 탈락시켰습니다.
-  2. **스케일링 정밀 분기**: 경사하강법 기반이자 계수 해석이 중요한 로지스틱 회귀에는 표준화(`StandardScaler`)를 적용하여 정밀 계수를 유도한 반면, 변수 분할 기준을 따르는 트리 기반 모델(RF, XGBoost)은 정보 왜곡을 막기 위해 원래의 비스케일링 원본 데이터를 공급하여 학습 정확도를 극대화했습니다.
-</details>
->>>>>>> f6e58c0
