@@ -47,5 +47,4 @@ __pycache__/
 *.pyc
 
 # ML models (heavy binary weights)
-backend/models/*.joblib
-
+models/*.joblib

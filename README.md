@@ -56,9 +56,9 @@
 
 | 구분 | 모델 | 역할 | 주요 분석 요소 | 주요 성능 지표 (Test ACC) |
 | :--- | :--- | :--- | :--- | :--- |
-| **베이스라인** | **Logistic Regression** | 성능 기준점 + 피처별 계수 해석 | 드래곤 가치를 골드로 직접 환산 (1 Dragon ≈ 1,568 Gold) | **71.6%** |
-| **비교** | **Random Forest** | 중간 비교 기준 (의사결정 앙상블) | 비선형 관계 학습 및 중요도 비교 대조 | **71.8%** |
-| **최적화** | **XGBoost** | 최고 성능 달성 (GridSearchCV 최적 튜닝) | 부스팅 피처 기여도 분석 및 최강 성능 입증 | **72.1%** |
+| **베이스라인** | **Logistic Regression** | 성능 기준점 + 피처별 계수 해석 | 드래곤 가치를 골드로 직접 환산 (1 Dragon ≈ 1,500 Gold) | **79.2%** |
+| **비교** | **Random Forest** | 중간 비교 기준 (의사결정 앙상블) | 비선형 관계 학습 및 중요도 비교 대조 | **78.2%** |
+| **최적화** | **XGBoost** | 최고 성능 달성 (GridSearchCV 최적 튜닝) | 부스팅 피처 기여도 분석 및 최강 성능 입증 | **77.8%** |
 
 ---
 
@@ -99,18 +99,14 @@
 
 ```text
 .
-├── 📁 backend/                 # 백엔드 스크립트 관련 디렉터리
-├── 📁 models/                  # 학습 완료된 모델 파라미터(가중치) 및 메타 데이터 저장소
-│   ├── 📄 feature_names.json   # 예측 시 사용되는 36개 피처의 순서 정보 보장용
-│   ├── 📄 logistic_regression.joblib  # 로지스틱 회귀 학습 완료 바이너리 가중치 파일
-│   ├── 📄 logistic_regression_code.py # 로지스틱 회귀 모델 생성/학습 코드가 독립된 스크립트
+├── 📁 models/                  # 학습 완료된 모델 파라미터 및 메타 데이터 저장소
+│   ├── 📄 feature_names.json   # 예측 시 사용되는 피처의 순서 정보 보장용
+│   ├── 📄 logistic_regression.json  # 로지스틱 회귀 학습 완료 가중치 및 절편 JSON
+│   ├── 📄 random_forest.json   # 랜덤 포레스트 컴팩트 트리 구조 JSON (경량화 최적화)
+│   ├── 📄 xgboost_code.py      # XGBoost m2cgen 컴파일 코드 (경량화 의존성 방지)
+│   ├── 📄 scaler.json          # 스케일링 평균/분산 정보의 JSON 버전 백업
 │   ├── 📄 metrics.json         # 각 모델의 성능 평가지표 (Accuracy, F1, ROC-AUC, CM, 계수 등) 기록
-│   ├── 📄 random_forest.joblib # 랜덤 포레스트 앙상블 학습 완료 바이너리 파일
-│   ├── 📄 random_forest_code.py# 랜덤 포레스트 모델 생성/학습 스크립트
-│   ├── 📄 xgboost.joblib       # XGBoost (GridSearchCV 최적화 적용) 바이너리 가중치
-│   ├── 📄 xgboost_code.py      # XGBoost 학습 설정 스크립트
-│   ├── 📄 scaler.joblib        # 입력 데이터 스케일링용 피클 (StandardScaler)
-│   └── 📄 scaler.json          # 스케일링 평균/분산 정보의 JSON 버전 백업
+│   └── 📄 champion_ml_win_rates.json # 3대 알고리즘별 챔피언 기여도 기반 동적 승률 데이터
 ├── 📁 static/                  # 정적 파일(이미지, CSS 등)을 호스팅하기 위한 폴더
 ├── 📁 templates/               # 프론트엔드 HTML 렌더링용 뷰(View) 템플릿
 │   └── 📄 index.html           # 대시보드 UI를 구성하는 마법공학 테마 SPA (Single Page Application)
@@ -119,7 +115,7 @@
 ├── 📄 LICENSE                  # 프로젝트 라이선스 공시
 ├── 📄 README.md                # 전체 프로젝트 소개 및 가이드 문서 (본 문서)
 ├── 📄 app.py                   # Flask 메인 애플리케이션 (라우팅, API 서빙, 모델 추론 통합 뷰)
-├── 📄 high_diamond_ranked_10min.csv # 모델 학습 원천 데이터셋 (Kaggle 출처, 10분 구간 통계)
+├── 📄 lol_clean_final.csv      # 모델 학습 원천 데이터셋 (10분 구간 통계 및 챔피언 라인 매핑)
 ├── 📄 requirements.txt         # 파이썬 패키지 의존성 목록 명세서 (Vercel 배포용)
 ├── 📄 train.py                 # 전처리 및 모델 학습 파이프라인의 메인 실행 스크립트
 └── 📄 vercel.json              # Vercel 환경에서 Flask(Python) 서버리스 함수를 띄우기 위한 설정 파일
@@ -128,10 +124,10 @@
 
 ### 주요 파일 역할 세부 설명
 
-* **`app.py`**: 서버의 심장부로 클라이언트와의 HTTP 통신을 담당합니다. `/api/predict` 등의 엔드포인트를 열어 전처리, 스케일링, 모델 추론 결과를 응답으로 반환합니다.
-* **`train.py`**: 다중공선성(Multi-collinearity)이 우려되는 피처를 제거하고, 모델 성격에 맞는 스케일링 분기 처리 및 하이퍼파라미터 튜닝을 거쳐 최종 `*.joblib` 파일들을 덤프합니다.
+* **`app.py`**: 서버의 심장부로 클라이언트와의 HTTP 통신을 담당합니다. 챔피언 구성 요소가 통합되어 단일 파일로 동작하며, `/api/predict` 등의 엔드포인트를 열어 JSON 경량 모델들을 메모리에 로드하고 다이내믹하게 추론을 수행합니다.
+* **`train.py`**: 챔피언 멀티핫 인코딩 등 전처리를 거쳐 로지스틱 회귀와 랜덤 포레스트 모델의 핵심 정보를 경량 JSON 형식으로 직렬화 및 추출하고, XGBoost 모델은 m2cgen 컴파일러로 코드화합니다.
 * **`templates/index.html`**: UI/UX 디자인이 집약된 클라이언트 파일입니다. 차트 렌더링(Chart.js), 비동기 페칭, 스크린샷 업로드 파싱 등 모든 브라우저 상호작용이 여기서 이루어집니다.
-* **`vercel.json` & `.vercelignore`**: PaaS 플랫폼(Vercel)에 배포할 때, 정적 프론트엔드 호스팅이 아닌 Python Serverless Function으로 래핑(Wrapping)하기 위한 핵심 인프라 파일입니다. 번들 용량 한계(최대 250MB)를 피하기 위한 배포 효율화가 적용되어 있습니다.
+* **`vercel.json` & `.vercelignore`**: PaaS 플랫폼(Vercel)에 배포할 때, 정적 프론트엔드 호스팅이 아닌 Python Serverless Function으로 래핑(Wrapping)하기 위한 핵심 인프라 파일입니다. 번들 용량 한계(최대 250MB)를 피하기 위해 `.joblib` 바이너리 대신 경량화된 JSON 모델로 추론을 수행합니다.
 
 ---
 
@@ -149,30 +145,32 @@
 
 ```mermaid
 graph TD
-    A[high_diamond_ranked_10min.csv] --> B[불필요 gameId 컬럼 제거]
-    B --> C[레드팀 redGoldDiff / redExperienceDiff 제거로 다중공선성 방지]
-    C --> D[학습 및 테스트 데이터 분할 80:20 / stratify=y]
+    A[lol_clean_final.csv] --> B[불필요 match_id 컬럼 제거]
+    B --> C[블루/레드 챔피언 멀티핫 인코딩 피처 생성]
+    C --> D[태그 및 조합 피처 원핫 인코딩 수행]
+    D --> E[학습 및 테스트 데이터 분할 80:20 / stratify=y]
     
-    D --> E{피처 스케일링 분기}
+    E --> F{피처 스케일링 분기}
     
-    E -- 로지스틱 회귀 전용 --> F[StandardScaler 표준화 적용]
-    F --> G[Logistic Regression 학습]
-    G --> H[계수 Coefficient 추출 및 드래곤 골드 가치 환산]
+    F -- 로지스틱 회귀 전용 --> G[StandardScaler 표준화 적용]
+    G --> H[Logistic Regression 학습]
+    H --> I[가중치/절편 추출 및 models/logistic_regression.json 직렬화]
     
-    E -- 트리 기반 모델 --> I[원본 비스케일링 데이터 활용]
-    I --> J[Random Forest 학습]
-    I --> K[XGBoost GridSearchCV 최적 파라미터 학습]
+    F -- 트리 기반 모델 --> J[원본 비스케일링 데이터 활용]
+    J --> K[Random Forest 학습]
+    J --> L[XGBoost GridSearchCV 최적 파라미터 학습]
     
-    J --> L[모델 평가 및 Confusion Matrix 저장]
-    K --> L
-    H --> L
+    K --> M[트리별 노드 분기/리프 추출 및 models/random_forest.json 직렬화]
+    L --> N[m2cgen 컴파일 및 models/xgboost_code.py 생성]
     
-    L --> M[models/metrics.json 저장 & joblib 모델 덤프]
+    I --> O[모델 평가 및 Confusion Matrix metrics.json 저장]
+    M --> O
+    N --> O
 ```
 
 <details open>
   <summary><b>🔥 데이터 전처리 핵심 포인트</b></summary>
   
-  1. **다중공선성 원천 배제**: 블루팀의 골드 차이와 경험치 차이는 레드팀의 값과 완벽히 대칭(부호만 반대)이므로, 다중공선성(Multicollinearity)으로 인한 회귀 모델의 불안정성을 완벽히 제거하기 위해 `redGoldDiff`, `redExperienceDiff`를 전처리 단계에서 전면 탈락시켰습니다.
-  2. **스케일링 정밀 분기**: 경사하강법 기반이자 계수 해석이 중요한 로지스틱 회귀에는 표준화(`StandardScaler`)를 적용하여 정밀 계수를 유도한 반면, 변수 분할 기준을 따르는 트리 기반 모델(RF, XGBoost)은 정보 왜곡을 막기 위해 원래의 비스케일링 원본 데이터를 공급하여 학습 정확도를 극대화했습니다.
+  1. **챔피언 멀티핫 인코딩**: 5개 라인별로 기입된 챔피언 이름을 양 팀 각각에 대해 160+개 챔피언 전체의 존재 여부(1.0 또는 0.0)로 매핑하는 멀티핫 인코딩을 적용해 모델이 챔피언 개별 특성과 승률 기여도를 효과적으로 포착할 수 있게 구성했습니다.
+  2. **JSON 경량 직렬화**: 수백 메가바이트의 라이브러리(`scikit-learn` 등)를 프로덕션 환경에 설치하는 의존성을 배제하기 위해, 학습 후 모델 가중치(로지스틱 회귀) 및 각 결정 트리 경로 분기 정보(랜덤 포레스트)를 순수한 JSON 구조로 덤프하여 무의존성 pure-Python 추론 환경을 완성했습니다.
 </details>

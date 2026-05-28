@@ -45,10 +45,15 @@ def train_and_evaluate():
     blue_champs_sets = df[blue_champion_cols].apply(lambda row: set(row.dropna().values), axis=1)
     red_champs_sets = df[red_champion_cols].apply(lambda row: set(row.dropna().values), axis=1)
     
+    # DataFrame 파편화 방지를 위해 딕셔너리로 취합 후 일괄 concat
+    champ_features = {}
     for champ in all_champions:
-        df[f'blue_champion_{champ}'] = blue_champs_sets.apply(lambda s: 1.0 if champ in s else 0.0)
-        df[f'red_champion_{champ}'] = red_champs_sets.apply(lambda s: 1.0 if champ in s else 0.0)
+        champ_features[f'blue_champion_{champ}'] = blue_champs_sets.apply(lambda s: 1.0 if champ in s else 0.0)
+        champ_features[f'red_champion_{champ}'] = red_champs_sets.apply(lambda s: 1.0 if champ in s else 0.0)
         
+    champ_df = pd.DataFrame(champ_features, index=df.index)
+    df = pd.concat([df, champ_df], axis=1)
+    
     # 원본 챔피언명 컬럼들 제거
     existing_champion_cols = [c for c in blue_champion_cols + red_champion_cols if c in df.columns]
     df = df.drop(columns=existing_champion_cols)
@@ -153,6 +158,7 @@ def train_and_evaluate():
     print(f"[Random Forest] 정확도: {metrics_report['Random Forest']['Accuracy']:.4f}")
 
     # --- 4단계. 최적화 모델: XGBoost ---
+    xgb_model = None
     if HAS_XGBOOST:
         print("XGBoost 모델 학습 및 튜닝 중...")
         xgb_base = XGBClassifier(random_state=42, eval_metric="logloss")
@@ -193,39 +199,59 @@ def train_and_evaluate():
     else:
         print("XGBoost가 설치되어 있지 않아 건너뜁니다.")
         
-    # [Vercel 최적화] m2cgen을 사용하여 무의존성 순수 파이썬 모델 코드 컴파일
+    # [경량화 최적화]
+    # 1. Logistic Regression JSON 저장
+    lr_data = {
+        "intercept": float(lr_model.intercept_[0]),
+        "coefficients": lr_model.coef_[0].tolist()
+    }
+    with open(os.path.join(models_dir, "logistic_regression.json"), "w", encoding="utf-8") as f:
+        json.dump(lr_data, f, indent=4)
+        
+    # 2. Random Forest JSON 저장 (트리 구조 컴팩트화)
+    rf_trees = []
+    for dt in rf_model.estimators_:
+        tree = dt.tree_
+        nodes = []
+        for i in range(tree.node_count):
+            if tree.children_left[i] == -1: # Leaf node
+                val = tree.value[i][0]
+                prob_1 = val[1] / (val[0] + val[1]) if (val[0] + val[1]) > 0 else 0.0
+                nodes.append(float(prob_1))
+            else: # Split node
+                nodes.append([
+                    int(tree.feature[i]),
+                    float(tree.threshold[i]),
+                    int(tree.children_left[i]),
+                    int(tree.children_right[i])
+                ])
+        rf_trees.append(nodes)
+    with open(os.path.join(models_dir, "random_forest.json"), "w", encoding="utf-8") as f:
+        json.dump(rf_trees, f) # No indent to save size
+        
+    # 3. XGBoost는 m2cgen 컴파일 유지 (코드 크기 64KB 수준으로 경량)
     try:
         import m2cgen as m2c
-        print("m2cgen으로 순수 파이썬 모델 코드 컴파일 중...")
-        
-        # 1. Logistic Regression 컴파일
-        lr_code = m2c.export_to_python(lr_model)
-        with open(os.path.join(models_dir, "logistic_regression_code.py"), "w", encoding="utf-8") as f:
-            f.write(lr_code)
-            
-        # 2. Random Forest 컴파일
-        rf_code = m2c.export_to_python(rf_model)
-        with open(os.path.join(models_dir, "random_forest_code.py"), "w", encoding="utf-8") as f:
-            f.write(rf_code)
-            
-        # 3. XGBoost 컴파일
-        if HAS_XGBOOST:
+        if HAS_XGBOOST and xgb_model is not None:
+            print("m2cgen으로 XGBoost 모델 코드 컴파일 중...")
             xgb_model.base_score = 0.5
             xgb_code = m2c.export_to_python(xgb_model)
             with open(os.path.join(models_dir, "xgboost_code.py"), "w", encoding="utf-8") as f:
                 f.write(xgb_code)
-                
-        # 4. 스케일러 파라미터 저장
-        scaler_data = {
-            "mean": scaler.mean_.tolist(),
-            "scale": scaler.scale_.tolist()
-        }
-        with open(os.path.join(models_dir, "scaler.json"), "w", encoding="utf-8") as f:
-            json.dump(scaler_data, f, indent=4)
-            
-        print("m2cgen 모델 컴파일 성공!")
+            print("XGBoost m2cgen 모델 컴파일 성공!")
     except Exception as e:
-        print(f"m2cgen 컴파일 에러: {str(e)}")
+        print(f"XGBoost m2cgen 컴파일 에러: {str(e)}")
+            
+    # 4. 스케일러 파라미터 저장
+    scaler_data = {
+        "mean": scaler.mean_.tolist(),
+        "scale": scaler.scale_.tolist()
+    }
+    with open(os.path.join(models_dir, "scaler.json"), "w", encoding="utf-8") as f:
+        json.dump(scaler_data, f, indent=4)
+        
+    # 5. 챔피언 기여도 기반 동적 승률 계산
+    calculate_champ_ml_win_rates(lr_model, rf_model, xgb_model, scaler, feature_names, all_champions, models_dir)
 
     # 지표 저장
     metrics_path = os.path.join(models_dir, "metrics.json")
@@ -235,6 +261,48 @@ def train_and_evaluate():
         
     return metrics_report
 
+def calculate_champ_ml_win_rates(lr_model, rf_model, xgb_model, scaler, feature_names, all_champions, models_dir):
+    """
+    모든 피처가 0인 가상 중립 상태에서 특정 챔피언 기여도(멀티핫=1.0)를 주었을 때의 블루팀 승률을 추출하여 저장
+    """
+    print("3대 알고리즘별 챔피언 기본 승률 예측 및 추출 중...")
+    champ_win_rates = {
+        "Logistic Regression": {},
+        "Random Forest": {},
+        "XGBoost": {}
+    }
+    
+    # 모든 피처가 0.0인 1행짜리 기본 DataFrame 생성
+    neutral_row = pd.DataFrame(0.0, index=[0], columns=feature_names)
+    
+    for champ in all_champions:
+        # 블루팀에 해당 챔피언 투입
+        champ_row = neutral_row.copy()
+        blue_champ_col = f'blue_champion_{champ}'
+        if blue_champ_col in champ_row.columns:
+            champ_row[blue_champ_col] = 1.0
+            
+        # 1. Logistic Regression 예측
+        champ_row_scaled = scaler.transform(champ_row)
+        lr_prob = lr_model.predict_proba(champ_row_scaled)[0][1]
+        champ_win_rates["Logistic Regression"][champ] = float(lr_prob)
+        
+        # 2. Random Forest 예측
+        rf_prob = rf_model.predict_proba(champ_row)[0][1]
+        champ_win_rates["Random Forest"][champ] = float(rf_prob)
+        
+        # 3. XGBoost 예측
+        if HAS_XGBOOST and xgb_model is not None:
+            xgb_prob = xgb_model.predict_proba(champ_row)[0][1]
+            champ_win_rates["XGBoost"][champ] = float(xgb_prob)
+        else:
+            champ_win_rates["XGBoost"][champ] = float(rf_prob)
+            
+    # 결과를 JSON 파일로 저장
+    win_rates_path = os.path.join(models_dir, "champion_ml_win_rates.json")
+    with open(win_rates_path, "w", encoding="utf-8") as f:
+        json.dump(champ_win_rates, f, indent=4, ensure_ascii=False)
+    print(f"머신러닝 기반 챔피언 동적 승률이 저장되었습니다: {win_rates_path}")
+
 if __name__ == "__main__":
     train_and_evaluate()
-
