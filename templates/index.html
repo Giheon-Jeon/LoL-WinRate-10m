@@ -667,10 +667,7 @@
 </head>
 <body>
 
-<div class="loading-overlay" id="loading">
-    <div class="spinner"></div>
-    <p style="margin-top: 1rem; color: var(--gold-main); font-weight: 600;">데이터 분석 중...</p>
-</div>
+
 
 <div class="container">
     <header>
@@ -1030,22 +1027,13 @@
         </div>
     </div>
 
-    <!-- Scanner & Mini Metrics List -->
-    <div class="main-grid" style="margin-top: 2rem;">
-        <div class="scanner-card" id="dropzone" onclick="document.getElementById('fileInput').click()">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--gold-main)" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-            <h4 style="margin-top: 1rem; color: var(--gold-bright);">스코어보드 스크린샷 스캔</h4>
-            <p style="color: var(--text-secondary); font-size: 0.75rem; margin-top: 0.2rem;">이미지 드래그 앤 드롭 또는 클릭하여 업로드</p>
-            <input type="file" id="fileInput" hidden accept="image/*" onchange="handleUpload(this.files[0])">
-        </div>
-
-        <div class="metrics-card-small" style="margin-top: 0;">
-            <h3 style="color: var(--gold-bright); margin-bottom: 1rem; font-size: 0.95rem;">🤖 모델별 핵심 지표 비교</h3>
-            <table id="metricsTable">
-                <thead><tr><th>모델명</th><th>정확도 (ACC)</th><th>F1-SCORE</th><th>ROC-AUC</th></tr></thead>
-                <tbody id="metricsBody"></tbody>
-            </table>
-        </div>
+    <!-- Mini Metrics List -->
+    <div class="metrics-card-small" style="margin-top: 2rem; width: 100%;">
+        <h3 style="color: var(--gold-bright); margin-bottom: 1rem; font-size: 0.95rem;">🤖 모델별 핵심 지표 비교</h3>
+        <table id="metricsTable">
+            <thead><tr><th>모델명</th><th>정확도 (ACC)</th><th>F1-SCORE</th><th>ROC-AUC</th></tr></thead>
+            <tbody id="metricsBody"></tbody>
+        </table>
     </div>
 
     <!-- 2~5단계. 모델별 상세 분석 대시보드 (신규) -->
@@ -2069,30 +2057,7 @@
         }
     }
 
-    async function handleUpload(file) {
-        if (!file) return;
-        document.getElementById('loading').style.display = 'flex';
-        const formData = new FormData();
-        formData.append('file', file);
-        try {
-            const res = await fetch('/api/parse-scoreboard', { method: 'POST', body: formData });
-            const data = await res.json();
-            if (data.error) return;
-            
-            for (let key in data) {
-                if (features.hasOwnProperty(key)) {
-                    updateVal(key, data[key]);
-                }
-            }
-            
-            // Set first blood visual
-            if (data.blueFirstBlood !== undefined) {
-                setFB(data.blueFirstBlood === 1 ? 'blue' : 'red');
-            } else {
-                predict();
-            }
-        } catch (e) {} finally { document.getElementById('loading').style.display = 'none'; }
-    }
+
 
     // Set Slider Defaults on Page Load
     function initInputs() {

@@ -5,20 +5,16 @@ import numpy as np
 import io
 import sys
 import importlib
+import joblib
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
-from PIL import Image
-import google.generativeai as genai
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 CORS(app)
 
 MODELS_DIR = os.path.join(os.path.dirname(__file__), "models")
 
-# Gemini API 설정 (환경변수)
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-if GEMINI_API_KEY:
-    genai.configure(api_key=GEMINI_API_KEY)
+
 
 # ==============================================================================
 # [INLINED] 챔피언 데이터베이스 및 드래프트 시너지/조합 계산 엔진
@@ -397,53 +393,35 @@ def run_model_inference(model_name, feature_dict, feature_order):
     input_values = [feature_dict.get(f, 0.0) for f in feature_order]
     
     if model_name == "Logistic Regression":
-        # JSON 기반 무의존성 추론
-        scaler_file = os.path.join(MODELS_DIR, "scaler.json")
-        lr_file = os.path.join(MODELS_DIR, "logistic_regression.json")
+        # joblib 기반 파이썬 모델 로드 및 추론
+        scaler = joblib.load(os.path.join(MODELS_DIR, "scaler.joblib"))
+        lr_model = joblib.load(os.path.join(MODELS_DIR, "logistic_regression.joblib"))
         
-        with open(scaler_file, "r") as f:
-            scaler_data = json.load(f)
-            scaler_mean = scaler_data["mean"]
-            scaler_scale = scaler_data["scale"]
-            
-        with open(lr_file, "r") as f:
-            lr_data = json.load(f)
-            intercept = lr_data["intercept"]
-            coefficients = lr_data["coefficients"]
-        
-        X_scaled = [(x_i - mean_i) / (scale_i if scale_i != 0 else 1.0) for x_i, mean_i, scale_i in zip(input_values, scaler_mean, scaler_scale)]
-        margin = intercept + sum(x_i * coef_i for x_i, coef_i in zip(X_scaled, coefficients))
-        return 1.0 / (1.0 + np.exp(-margin))
+        # 모델 예측
+        X_scaled = scaler.transform([input_values])
+        return float(lr_model.predict_proba(X_scaled)[0][1])
         
     elif model_name == "Random Forest":
-        # JSON 기반 트리 순회 무의존성 추론
-        rf_file = os.path.join(MODELS_DIR, "random_forest.json")
-        with open(rf_file, "r") as f:
-            rf_trees = json.load(f)
-            
-        total_prob = 0.0
-        for nodes in rf_trees:
-            node_id = 0
-            while True:
-                node = nodes[node_id]
-                if isinstance(node, (int, float)): # Leaf
-                    total_prob += node
-                    break
-                # Split node: [feature_idx, threshold, left, right]
-                feat_idx, thresh, left, right = node
-                if input_values[feat_idx] <= thresh:
-                    node_id = left
-                else:
-                    node_id = right
-        return total_prob / len(rf_trees)
+        # joblib 기반 파이썬 모델 로드 및 추론
+        rf_model = joblib.load(os.path.join(MODELS_DIR, "random_forest.joblib"))
+        return float(rf_model.predict_proba([input_values])[0][1])
         
     elif model_name == "XGBoost":
-        # 모듈 캐싱 문제 방지를 위해 sys.modules에서 제거 후 로드
+        # joblib을 통한 추론 시도
+        try:
+            xgb_path = os.path.join(MODELS_DIR, "xgboost.joblib")
+            if os.path.exists(xgb_path):
+                xgb_model = joblib.load(xgb_path)
+                return float(xgb_model.predict_proba([input_values])[0][1])
+        except Exception:
+            pass
+        
+        # xgboost 라이브러리가 없는 환경을 위해 컴파일된 코드로 폴백
         if 'models.xgboost_code' in sys.modules:
             importlib.reload(sys.modules['models.xgboost_code'])
         from models.xgboost_code import score as xgb_score
         proba = xgb_score(input_values)
-        return proba[1]
+        return float(proba[1])
     else:
         raise ValueError(f"Invalid model name: {model_name}")
 
@@ -709,45 +687,7 @@ def train_models():
     except Exception as e:
         return jsonify({"error": f"학습 중 오류 발생: {str(e)}"}), 500
 
-@app.route("/api/parse-scoreboard", methods=["POST"])
-def parse_scoreboard():
-    """Gemini Vision 기반 스코어보드 이미지 분석 API"""
-    if 'file' not in request.files:
-        return jsonify({"error": "파일이 업로드되지 않았습니다."}), 400
-    
-    file = request.files['file']
-    try:
-        image = Image.open(file.stream)
-    except Exception as e:
-        return jsonify({"error": f"이미지 인식 실패: {str(e)}"}), 400
-        
-    if not GEMINI_API_KEY:
-        # 데모 응답 (키가 없을 경우)
-        return jsonify({
-            "is_mocked": True,
-            "blueKills": 9, "blueDeaths": 4, "blueAssists": 6,
-            "blueTotalMinionsKilled": 106, "blueAvgLevel": 5.6,
-            "blueTotalGold": 16800, "blueTotalExperience": 18200,
-            "blueWardsPlaced": 15, "blueWardsDestroyed": 2,
-            "blueDragons": 1, "blueHeralds": 0, "blueTowersDestroyed": 0,
-            "blueTotalJungleMinionsKilled": 50, "blueFirstBlood": 1,
-            "redKills": 0, "redDeaths": 9, "redAssists": 1,
-            "redTotalMinionsKilled": 89, "redAvgLevel": 5.6,
-            "redTotalGold": 15400, "redTotalExperience": 17200,
-            "redWardsPlaced": 14, "redWardsDestroyed": 3,
-            "redDragons": 0, "redHeralds": 1, "redTowersDestroyed": 0,
-            "redTotalJungleMinionsKilled": 48, "redFirstBlood": 0
-        })
-    
-    try:
-        prompt = "이 리그 오브 레전드 스코어보드를 분석하여 블루팀과 레드팀의 총 킬, 데스, 골드, CS, 와드, 드래곤, 전령 정보를 JSON 형태로 추출해주세요."
-        model = genai.GenerativeModel("gemini-2.0-flash")
-        response = model.generate_content([image, prompt], generation_config={"response_mime_type": "application/json"})
-        parsed_data = json.loads(response.text.strip())
-        parsed_data["is_mocked"] = False
-        return jsonify(parsed_data)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=True)
