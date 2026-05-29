@@ -2,6 +2,7 @@ import lrModel from '../../models/logistic_regression.json';
 import rfModel from '../../models/random_forest.json';
 import scaler from '../../models/scaler.json';
 import featureOrder from '../../models/feature_names.json';
+import featureOrderTree from '../../models/feature_names_tree.json';
 import mlWinRates from '../../models/champion_ml_win_rates.json';
 import { score as xgbScore } from '../../models/xgboost_code.js';
 
@@ -148,36 +149,68 @@ export function determineComposition(tags) {
     return '혼합조합';
 }
 
-// 특수 시너지 보너스
-export const CHAMPION_SYNERGIES = [
-    { champs: ["Lulu", "KogMaw"], bonus: 0.040 },
-    { champs: ["Yasuo", "Gragas"], bonus: 0.035 },
-    { champs: ["Yasuo", "Malphite"], bonus: 0.030 },
-    { champs: ["Lucian", "Nami"], bonus: 0.030 },
-    { champs: ["Rakan", "Xayah"], bonus: 0.025 },
-    { champs: ["Nautilus", "Samira"], bonus: 0.025 },
-    { champs: ["Amumu", "MissFortune"], bonus: 0.020 },
-    { champs: ["JarvanIV", "Orianna"], bonus: 0.025 },
-    { champs: ["Milio", "Jinx"], bonus: 0.020 },
-    { champs: ["Braum", "Lucian"], bonus: 0.020 }
+// 피처별 계수 매핑 딕셔너리 빌드
+const lrCoeffs = {};
+featureOrder.forEach((name, idx) => {
+    lrCoeffs[name] = lrModel.coefficients[idx];
+});
+
+// 특수 시너지 보너스 (학습된 가중치 기반 동적 생성)
+export const CHAMPION_SYNERGIES = [];
+const synergyPairs = [
+    ["Lulu", "KogMaw"],
+    ["Yasuo", "Gragas"],
+    ["Yasuo", "Malphite"],
+    ["Lucian", "Nami"],
+    ["Rakan", "Xayah"],
+    ["Nautilus", "Samira"],
+    ["Amumu", "MissFortune"],
+    ["JarvanIV", "Orianna"],
+    ["Milio", "Jinx"],
+    ["Braum", "Lucian"]
 ];
 
-// 카운터 관계
-export const CHAMPION_COUNTERS = [
-    { counter: "Caitlyn", victim: "Vayne", bonus: 0.025 },
-    { counter: "Morgana", victim: "Blitzcrank", bonus: 0.025 },
-    { counter: "Morgana", victim: "Nautilus", bonus: 0.020 },
-    { counter: "Kassadin", victim: "Veigar", bonus: 0.030 },
-    { counter: "Sylas", victim: "Malphite", bonus: 0.030 },
-    { counter: "Fiora", victim: "Aatrox", bonus: 0.020 },
-    { counter: "Poppy", victim: "LeeSin", bonus: 0.025 },
-    { counter: "Jax", victim: "MasterYi", bonus: 0.030 },
-    { counter: "Vayne", victim: "DrMundo", bonus: 0.025 },
-    { counter: "Teemo", victim: "Nasus", bonus: 0.020 },
-    { counter: "Zed", victim: "Veigar", bonus: 0.020 },
-    { counter: "Cassiopeia", victim: "Ryze", bonus: 0.020 },
-    { counter: "Olaf", victim: "Sejuani", bonus: 0.025 }
+synergyPairs.forEach(([c1, c2]) => {
+    const sortedChamps = [c1, c2].sort();
+    const featName = `blue_synergy_${sortedChamps[0]}_${sortedChamps[1]}`;
+    // 학습된 계수가 있으면 사용하고, 승률 보너스는 coef * 0.25 (로그 오즈 근사)로 매핑.
+    // 최소 0.005의 기본값을 보장하도록 설정.
+    const coef = lrCoeffs[featName] !== undefined ? lrCoeffs[featName] : 0.08;
+    const bonus = Math.max(0.005, parseFloat((coef * 0.25).toFixed(4)));
+    CHAMPION_SYNERGIES.push({
+        champs: [c1, c2],
+        bonus: bonus
+    });
+});
+
+// 카운터 관계 (학습된 가중치 기반 동적 생성)
+export const CHAMPION_COUNTERS = [];
+const counterPairs = [
+    ["Caitlyn", "Vayne"],
+    ["Morgana", "Blitzcrank"],
+    ["Morgana", "Nautilus"],
+    ["Kassadin", "Veigar"],
+    ["Sylas", "Malphite"],
+    ["Fiora", "Aatrox"],
+    ["Poppy", "LeeSin"],
+    ["Jax", "MasterYi"],
+    ["Vayne", "DrMundo"],
+    ["Teemo", "Nasus"],
+    ["Zed", "Veigar"],
+    ["Cassiopeia", "Ryze"],
+    ["Olaf", "Sejuani"]
 ];
+
+counterPairs.forEach(([counter, victim]) => {
+    const featName = `blue_counter_${counter}_${victim}`;
+    const coef = lrCoeffs[featName] !== undefined ? lrCoeffs[featName] : 0.08;
+    const bonus = Math.max(0.005, parseFloat((coef * 0.25).toFixed(4)));
+    CHAMPION_COUNTERS.push({
+        counter: counter,
+        victim: victim,
+        bonus: bonus
+    });
+});
 
 // 밴픽 조합 시너지 & 카운터 스코어 연산
 export function calculateCompositionScores(blueChampions, redChampions, mlWinRates = null) {
@@ -366,7 +399,9 @@ function predictRfTree(nodes, inputValues) {
 
 // 개별 모델 추론
 export function runModelInference(modelName, featureDict) {
-    const inputValues = featureOrder.map(f => featureDict[f] || 0.0);
+    const isTreeModel = modelName === "Random Forest" || modelName === "XGBoost";
+    const order = isTreeModel ? featureOrderTree : featureOrder;
+    const inputValues = order.map(f => featureDict[f] || 0.0);
     
     if (modelName === "Logistic Regression") {
         const { mean, scale } = scaler;
@@ -441,7 +476,33 @@ export function calculateMLCompositionScore(modelName, blueChamps, redChamps) {
     redChampsFull.forEach(c => {
         if (c) featureDict[`red_champion_${c}`] = 1.0;
     });
-    
+
+    // 시너지 피처 탑재
+    CHAMPION_SYNERGIES.forEach(s => {
+        const c1 = s.champs[0];
+        const c2 = s.champs[1];
+        if (blueChampsFull.includes(c1) && blueChampsFull.includes(c2)) {
+            const sortedChamps = [c1, c2].sort();
+            featureDict[`blue_synergy_${sortedChamps[0]}_${sortedChamps[1]}`] = 1.0;
+        }
+        if (redChampsFull.includes(c1) && redChampsFull.includes(c2)) {
+            const sortedChamps = [c1, c2].sort();
+            featureDict[`red_synergy_${sortedChamps[0]}_${sortedChamps[1]}`] = 1.0;
+        }
+    });
+
+    // 카운터 피처 탑재
+    CHAMPION_COUNTERS.forEach(c => {
+        const counter = c.counter;
+        const victim = c.victim;
+        if (blueChampsFull.includes(counter) && redChampsFull.includes(victim)) {
+            featureDict[`blue_counter_${counter}_${victim}`] = 1.0;
+        }
+        if (redChampsFull.includes(counter) && blueChampsFull.includes(victim)) {
+            featureDict[`red_counter_${counter}_${victim}`] = 1.0;
+        }
+    });
+
     try {
         return runModelInference(modelName, featureDict);
     } catch (e) {
@@ -533,6 +594,32 @@ export function predictMatch(modelName, rawInput, blueChamps, redChamps) {
     });
     redChampsFull.forEach(c => {
         if (c) featureDict[`red_champion_${c}`] = 1.0;
+    });
+
+    // 시너지 피처 추가
+    CHAMPION_SYNERGIES.forEach(s => {
+        const c1 = s.champs[0];
+        const c2 = s.champs[1];
+        if (blueChampsFull.includes(c1) && blueChampsFull.includes(c2)) {
+            const sortedChamps = [c1, c2].sort();
+            featureDict[`blue_synergy_${sortedChamps[0]}_${sortedChamps[1]}`] = 1.0;
+        }
+        if (redChampsFull.includes(c1) && redChampsFull.includes(c2)) {
+            const sortedChamps = [c1, c2].sort();
+            featureDict[`red_synergy_${sortedChamps[0]}_${sortedChamps[1]}`] = 1.0;
+        }
+    });
+
+    // 카운터 피처 추가
+    CHAMPION_COUNTERS.forEach(c => {
+        const counter = c.counter;
+        const victim = c.victim;
+        if (blueChampsFull.includes(counter) && redChampsFull.includes(victim)) {
+            featureDict[`blue_counter_${counter}_${victim}`] = 1.0;
+        }
+        if (redChampsFull.includes(counter) && blueChampsFull.includes(victim)) {
+            featureDict[`red_counter_${counter}_${victim}`] = 1.0;
+        }
     });
     
     // 4. 모델 추론

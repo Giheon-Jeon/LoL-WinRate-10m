@@ -82,14 +82,96 @@ def train_and_evaluate():
         
     df_lr = pd.concat([df_lr, pd.DataFrame(blue_champ_data, index=df_lr.index), pd.DataFrame(red_champ_data, index=df_lr.index)], axis=1)
 
+    # 시너지 및 카운터 피처 생성
+    SYNERGY_LIST = [
+        ("Lulu", "KogMaw"),
+        ("Yasuo", "Gragas"),
+        ("Yasuo", "Malphite"),
+        ("Lucian", "Nami"),
+        ("Rakan", "Xayah"),
+        ("Nautilus", "Samira"),
+        ("Amumu", "MissFortune"),
+        ("JarvanIV", "Orianna"),
+        ("Milio", "Jinx"),
+        ("Braum", "Lucian")
+    ]
+
+    COUNTER_LIST = [
+        ("Caitlyn", "Vayne"),
+        ("Morgana", "Blitzcrank"),
+        ("Morgana", "Nautilus"),
+        ("Kassadin", "Veigar"),
+        ("Sylas", "Malphite"),
+        ("Fiora", "Aatrox"),
+        ("Poppy", "LeeSin"),
+        ("Jax", "MasterYi"),
+        ("Vayne", "DrMundo"),
+        ("Teemo", "Nasus"),
+        ("Zed", "Veigar"),
+        ("Cassiopeia", "Ryze"),
+        ("Olaf", "Sejuani")
+    ]
+
+    blue_champs_sets = [
+        set(row) for row in df_lr[[f'blue_{r}_champion' for r in ['top', 'jungle', 'middle', 'bottom', 'utility']]].values
+    ]
+    red_champs_sets = [
+        set(row) for row in df_lr[[f'red_{r}_champion' for r in ['top', 'jungle', 'middle', 'bottom', 'utility']]].values
+    ]
+
+    synergy_data = {}
+    for c1, c2 in SYNERGY_LIST:
+        sorted_pair = sorted([c1, c2])
+        # 블루팀 시너지
+        feat_blue = f"blue_synergy_{sorted_pair[0]}_{sorted_pair[1]}"
+        synergy_data[feat_blue] = np.array([
+            1.0 if (c1 in b_set and c2 in b_set) else 0.0
+            for b_set in blue_champs_sets
+        ])
+        # 레드팀 시너지
+        feat_red = f"red_synergy_{sorted_pair[0]}_{sorted_pair[1]}"
+        synergy_data[feat_red] = np.array([
+            1.0 if (c1 in r_set and c2 in r_set) else 0.0
+            for r_set in red_champs_sets
+        ])
+
+    counter_data = {}
+    for counter, victim in COUNTER_LIST:
+        # 블루 카운터
+        feat_blue = f"blue_counter_{counter}_{victim}"
+        counter_data[feat_blue] = np.array([
+            1.0 if (counter in b_set and victim in r_set) else 0.0
+            for b_set, r_set in zip(blue_champs_sets, red_champs_sets)
+        ])
+        # 레드 카운터
+        feat_red = f"red_counter_{counter}_{victim}"
+        counter_data[feat_red] = np.array([
+            1.0 if (counter in r_set and victim in b_set) else 0.0
+            for b_set, r_set in zip(blue_champs_sets, red_champs_sets)
+        ])
+
+    df_lr = pd.concat([
+        df_lr,
+        pd.DataFrame(synergy_data, index=df_lr.index),
+        pd.DataFrame(counter_data, index=df_lr.index)
+    ], axis=1)
+
     # 태그 및 조합 원핫 인코딩
     tag_cols = [f'blue_{role}_tag' for role in ['top', 'jungle', 'middle', 'bottom', 'utility']] + \
                [f'red_{role}_tag' for role in ['top', 'jungle', 'middle', 'bottom', 'utility']]
     comp_cols = ['blue_comp', 'red_comp']
     df_lr = pd.get_dummies(df_lr, columns=tag_cols + comp_cols, dtype=float)
 
-    # 텍스트 및 불필요 원천 컬럼 제거
-    drop_cols_lr = ['match_id', 'blue_heralds', 'red_heralds'] + \
+    # 텍스트 및 불필요 원천 컬럼 제거 (다중공선성 제거를 위해 개별 라인 세부 피처 드랍)
+    drop_cols_lr = ['match_id', 'blue_heralds', 'red_heralds', 'blue_kills', 'red_kills'] + \
+                   [f'blue_{r}_gold' for r in ['top', 'jungle', 'middle', 'bottom', 'utility']] + \
+                   [f'red_{r}_gold' for r in ['top', 'jungle', 'middle', 'bottom', 'utility']] + \
+                   [f'blue_{r}_cs' for r in ['top', 'jungle', 'middle', 'bottom', 'utility']] + \
+                   [f'red_{r}_cs' for r in ['top', 'jungle', 'middle', 'bottom', 'utility']] + \
+                   [f'blue_{r}_kills' for r in ['top', 'jungle', 'middle', 'bottom', 'utility']] + \
+                   [f'red_{r}_kills' for r in ['top', 'jungle', 'middle', 'bottom', 'utility']] + \
+                   [f'blue_{r}_deaths' for r in ['top', 'jungle', 'middle', 'bottom', 'utility']] + \
+                   [f'red_{r}_deaths' for r in ['top', 'jungle', 'middle', 'bottom', 'utility']] + \
                    [f'blue_{role}_champion' for role in ['top', 'jungle', 'middle', 'bottom', 'utility']] + \
                    [f'red_{role}_champion' for role in ['top', 'jungle', 'middle', 'bottom', 'utility']]
     df_lr = df_lr.drop(columns=[c for c in drop_cols_lr if c in df_lr.columns], errors='ignore')
@@ -102,7 +184,7 @@ def train_and_evaluate():
     # ----------------------------------------------------
     print("트리 모델용 피처 인코딩 중...")
     df_tree = df.copy()
-    drop_cols_tree = ['match_id', 'blue_heralds', 'red_heralds'] + \
+    drop_cols_tree = ['match_id', 'blue_heralds', 'red_heralds', 'blue_kills', 'red_kills'] + \
                       [c for c in df_tree.columns if 'champion' in c] + \
                       [c for c in df_tree.columns if '_tag' in c] + \
                       [c for c in df_tree.columns if '_comp' in c]
@@ -144,7 +226,7 @@ def train_and_evaluate():
     
     # --- [모델 1] Logistic Regression ---
     print("Logistic Regression 모델 학습 중...")
-    lr_model = LogisticRegression(max_iter=1000, random_state=42)
+    lr_model = LogisticRegression(C=0.1, max_iter=1000, random_state=42)
     lr_model.fit(X_tr_scaled_lr, y_tr_lr)
     
     y_pred_lr = lr_model.predict(X_te_scaled_lr)
@@ -268,6 +350,29 @@ def train_and_evaluate():
             "Best_Params": best_params
         }
         print(f"[XGBoost] 정확도: {metrics_report['XGBoost']['Accuracy']:.4f}")
+        
+        # 앙상블 (Soft Voting) 모델 평가 추가
+        y_pred_proba_ensemble = 0.4 * y_pred_proba_lr + 0.4 * y_pred_proba_xgb + 0.2 * y_pred_proba_rf
+        y_pred_ensemble = (y_pred_proba_ensemble >= 0.5).astype(int)
+        
+        tn_ens, fp_ens, fn_ens, tp_ens = confusion_matrix(y_te_lr, y_pred_ensemble).ravel()
+        
+        metrics_report["Ensemble (Soft Voting)"] = {
+            "Accuracy": float(accuracy_score(y_te_lr, y_pred_ensemble)),
+            "Precision": float(precision_score(y_te_lr, y_pred_ensemble)),
+            "Recall": float(recall_score(y_te_lr, y_pred_ensemble)),
+            "F1-Score": float(f1_score(y_te_lr, y_pred_ensemble)),
+            "ROC-AUC": float(roc_auc_score(y_te_lr, y_pred_proba_ensemble)),
+            "Confusion_Matrix": {
+                "TN": int(tn_ens), "FP": int(fp_ens), "FN": int(fn_ens), "TP": int(tp_ens)
+            },
+            "Weights": {
+                "Logistic Regression": 0.4,
+                "XGBoost": 0.4,
+                "Random Forest": 0.2
+            }
+        }
+        print(f"[Ensemble] 정확도: {metrics_report['Ensemble (Soft Voting)']['Accuracy']:.4f}")
     else:
         print("XGBoost가 설치되어 있지 않아 건너뜁니다.")
 

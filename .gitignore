@@ -54,3 +54,7 @@ models/*.joblib
 .claude/
 teamproject/**/.DS_Store
 teamproject/**/.claude/
+
+# vite cache
+/.vite
+

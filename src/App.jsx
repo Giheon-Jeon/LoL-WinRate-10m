@@ -105,7 +105,7 @@ export default function App() {
   const [modalOpen, setModalOpen] = useState(false);
   const [activeSlot, setActiveSlot] = useState({ team: 'blue', index: 0 });
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState('xgb');
+  const [activeTab, setActiveTab] = useState('ensemble');
   
   const [prediction, setPrediction] = useState({
     prediction: 1,
@@ -585,33 +585,78 @@ export default function App() {
             </div>
 
             <div className="flex flex-col gap-3 text-[10px]">
-              {/* K/D/A */}
-              <div className="flex justify-between items-center bg-white/[0.02] border border-white/5 rounded-xl p-2">
-                <span className="text-text-secondary font-semibold">K / D / A</span>
-                <div className="flex gap-1 items-center">
-                  <input
-                    type="number"
-                    min="0"
-                    value={stats.kills}
-                    onChange={(e) => handleLineStatChange(team, lane, 'kills', e.target.value)}
-                    className="w-7 bg-black/60 border border-border-glass rounded text-center text-xs p-0.5 outline-none font-bold text-text-primary"
-                  />
-                  <span className="text-text-secondary/30">/</span>
-                  <input
-                    type="number"
-                    min="0"
-                    value={stats.deaths}
-                    onChange={(e) => handleLineStatChange(team, lane, 'deaths', e.target.value)}
-                    className="w-7 bg-black/60 border border-border-glass rounded text-center text-xs p-0.5 outline-none font-bold text-text-primary"
-                  />
-                  <span className="text-text-secondary/30">/</span>
-                  <input
-                    type="number"
-                    min="0"
-                    value={stats.assists}
-                    onChange={(e) => handleLineStatChange(team, lane, 'assists', e.target.value)}
-                    className="w-7 bg-black/60 border border-border-glass rounded text-center text-xs p-0.5 outline-none font-bold text-text-primary"
-                  />
+              {/* K/D/A 조작 카드 */}
+              <div className="flex flex-col gap-2 bg-white/[0.02] border border-white/5 rounded-2xl p-3">
+                <div className="flex justify-between items-center text-[10px] text-text-secondary font-bold border-b border-white/5 pb-1">
+                  <span>킬(K) / 데스(D) / 어시스트(A) 설정</span>
+                  <span className="text-gold-main font-bold">{stats.kills}/{stats.deaths}/{stats.assists}</span>
+                </div>
+                <div className="flex gap-2 justify-between items-center">
+                  {/* Kills Counter */}
+                  <div className="flex flex-col items-center gap-1 flex-1">
+                    <span className="text-[8px] text-text-secondary/60">KILLS</span>
+                    <div className="flex items-center bg-black/60 border border-white/10 rounded-xl overflow-hidden w-full justify-between">
+                      <button 
+                        type="button"
+                        onClick={() => handleLineStatChange(team, lane, 'kills', Math.max(0, stats.kills - 1))}
+                        className="w-6 h-6 flex items-center justify-center hover:bg-white/10 text-xs font-bold text-text-secondary active:scale-90 transition select-none"
+                      >
+                        -
+                      </button>
+                      <span className="text-xs font-black text-text-primary select-none">{stats.kills}</span>
+                      <button 
+                        type="button"
+                        onClick={() => handleLineStatChange(team, lane, 'kills', stats.kills + 1)}
+                        className="w-6 h-6 flex items-center justify-center hover:bg-white/10 text-xs font-bold text-text-secondary active:scale-90 transition select-none"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Deaths Counter */}
+                  <div className="flex flex-col items-center gap-1 flex-1">
+                    <span className="text-[8px] text-text-secondary/60">DEATHS</span>
+                    <div className="flex items-center bg-black/60 border border-white/10 rounded-xl overflow-hidden w-full justify-between">
+                      <button 
+                        type="button"
+                        onClick={() => handleLineStatChange(team, lane, 'deaths', Math.max(0, stats.deaths - 1))}
+                        className="w-6 h-6 flex items-center justify-center hover:bg-white/10 text-xs font-bold text-text-secondary active:scale-90 transition select-none"
+                      >
+                        -
+                      </button>
+                      <span className="text-xs font-black text-text-primary select-none">{stats.deaths}</span>
+                      <button 
+                        type="button"
+                        onClick={() => handleLineStatChange(team, lane, 'deaths', stats.deaths + 1)}
+                        className="w-6 h-6 flex items-center justify-center hover:bg-white/10 text-xs font-bold text-text-secondary active:scale-90 transition select-none"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Assists Counter */}
+                  <div className="flex flex-col items-center gap-1 flex-1">
+                    <span className="text-[8px] text-text-secondary/60">ASSISTS</span>
+                    <div className="flex items-center bg-black/60 border border-white/10 rounded-xl overflow-hidden w-full justify-between">
+                      <button 
+                        type="button"
+                        onClick={() => handleLineStatChange(team, lane, 'assists', Math.max(0, stats.assists - 1))}
+                        className="w-6 h-6 flex items-center justify-center hover:bg-white/10 text-xs font-bold text-text-secondary active:scale-90 transition select-none"
+                      >
+                        -
+                      </button>
+                      <span className="text-xs font-black text-text-primary select-none">{stats.assists}</span>
+                      <button 
+                        type="button"
+                        onClick={() => handleLineStatChange(team, lane, 'assists', stats.assists + 1)}
+                        className="w-6 h-6 flex items-center justify-center hover:bg-white/10 text-xs font-bold text-text-secondary active:scale-90 transition select-none"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -1039,6 +1084,7 @@ export default function App() {
           🔎 모델 정밀 분석 대시보드
         </h3>
         <div className="flex border-b border-border-glass mb-6 gap-2 overflow-x-auto pb-1">
+          <button onClick={() => setActiveTab('ensemble')} className={`text-xs uppercase tracking-wider px-4 py-2 font-bold transition outline-none ${activeTab === 'ensemble' ? 'text-gold-main border-b-2 border-gold-main' : 'text-text-secondary hover:text-gold-bright'}`}>앙상블 (Soft Voting)</button>
           <button onClick={() => setActiveTab('lr')} className={`text-xs uppercase tracking-wider px-4 py-2 font-bold transition outline-none ${activeTab === 'lr' ? 'text-gold-main border-b-2 border-gold-main' : 'text-text-secondary hover:text-gold-bright'}`}>로지스틱 회귀 (베이스라인)</button>
           <button onClick={() => setActiveTab('rf')} className={`text-xs uppercase tracking-wider px-4 py-2 font-bold transition outline-none ${activeTab === 'rf' ? 'text-gold-main border-b-2 border-gold-main' : 'text-text-secondary hover:text-gold-bright'}`}>랜덤 포레스트 (비교 모델)</button>
           <button onClick={() => setActiveTab('xgb')} className={`text-xs uppercase tracking-wider px-4 py-2 font-bold transition outline-none ${activeTab === 'xgb' ? 'text-gold-main border-b-2 border-gold-main' : 'text-text-secondary hover:text-gold-bright'}`}>XGBoost (최적화 모델)</button>
@@ -1051,19 +1097,19 @@ export default function App() {
               <h5 className="text-gold-main text-xs font-semibold mb-3 border-b border-white/5 pb-1">평가 지표 (Test Metrics)</h5>
               <div className="grid grid-cols-2 gap-2 text-center">
                 <div className="bg-black/20 border border-white/5 rounded-lg p-2.5">
-                  <div className="text-xl font-black text-gold-bright">{(metricsData[activeTab === 'lr' ? 'Logistic Regression' : activeTab === 'rf' ? 'Random Forest' : 'XGBoost'].Accuracy * 100).toFixed(1)}%</div>
+                  <div className="text-xl font-black text-gold-bright">{(metricsData[activeTab === 'lr' ? 'Logistic Regression' : activeTab === 'rf' ? 'Random Forest' : 'ensemble' ? 'Ensemble (Soft Voting)' : 'XGBoost']?.Accuracy * 100).toFixed(1)}%</div>
                   <div className="text-[9px] text-text-secondary uppercase">Accuracy</div>
                 </div>
                 <div className="bg-black/20 border border-white/5 rounded-lg p-2.5">
-                  <div className="text-xl font-black text-gold-bright">{(metricsData[activeTab === 'lr' ? 'Logistic Regression' : activeTab === 'rf' ? 'Random Forest' : 'XGBoost']['F1-Score'] * 100).toFixed(1)}%</div>
+                  <div className="text-xl font-black text-gold-bright">{(metricsData[activeTab === 'lr' ? 'Logistic Regression' : activeTab === 'rf' ? 'Random Forest' : 'ensemble' ? 'Ensemble (Soft Voting)' : 'XGBoost']?.['F1-Score'] * 100).toFixed(1)}%</div>
                   <div className="text-[9px] text-text-secondary uppercase">F1-Score</div>
                 </div>
                 <div className="bg-black/20 border border-white/5 rounded-lg p-2.5">
-                  <div className="text-xl font-black text-gold-bright">{metricsData[activeTab === 'lr' ? 'Logistic Regression' : activeTab === 'rf' ? 'Random Forest' : 'XGBoost']['ROC-AUC'].toFixed(3)}</div>
+                  <div className="text-xl font-black text-gold-bright">{metricsData[activeTab === 'lr' ? 'Logistic Regression' : activeTab === 'rf' ? 'Random Forest' : 'ensemble' ? 'Ensemble (Soft Voting)' : 'XGBoost']?.['ROC-AUC'].toFixed(3)}</div>
                   <div className="text-[9px] text-text-secondary uppercase">ROC-AUC</div>
                 </div>
                 <div className="bg-black/20 border border-white/5 rounded-lg p-2.5">
-                  <div className="text-xl font-black text-gold-bright">{(metricsData[activeTab === 'lr' ? 'Logistic Regression' : activeTab === 'rf' ? 'Random Forest' : 'XGBoost'].Precision * 100).toFixed(1)}%</div>
+                  <div className="text-xl font-black text-gold-bright">{(metricsData[activeTab === 'lr' ? 'Logistic Regression' : activeTab === 'rf' ? 'Random Forest' : 'ensemble' ? 'Ensemble (Soft Voting)' : 'XGBoost']?.Precision * 100).toFixed(1)}%</div>
                   <div className="text-[9px] text-text-secondary uppercase">Precision</div>
                 </div>
               </div>
@@ -1074,36 +1120,81 @@ export default function App() {
               <div className="grid grid-cols-2 gap-2 text-[10px] text-center font-bold">
                 <div className="bg-blue-team/5 border-l-4 border-blue-team rounded p-2 text-blue-team">
                   <div>True Positive (TP)</div>
-                  <div className="text-lg font-black">{metricsData[activeTab === 'lr' ? 'Logistic Regression' : activeTab === 'rf' ? 'Random Forest' : 'XGBoost'].Confusion_Matrix.TP}</div>
+                  <div className="text-lg font-black">{metricsData[activeTab === 'lr' ? 'Logistic Regression' : activeTab === 'rf' ? 'Random Forest' : 'ensemble' ? 'Ensemble (Soft Voting)' : 'XGBoost']?.Confusion_Matrix.TP}</div>
                 </div>
                 <div className="bg-red-team/5 border-l-4 border-red-team rounded p-2 text-red-team">
                   <div>False Positive (FP)</div>
-                  <div className="text-lg font-black">{metricsData[activeTab === 'lr' ? 'Logistic Regression' : activeTab === 'rf' ? 'Random Forest' : 'XGBoost'].Confusion_Matrix.FP}</div>
+                  <div className="text-lg font-black">{metricsData[activeTab === 'lr' ? 'Logistic Regression' : activeTab === 'rf' ? 'Random Forest' : 'ensemble' ? 'Ensemble (Soft Voting)' : 'XGBoost']?.Confusion_Matrix.FP}</div>
                 </div>
                 <div className="bg-red-team/5 border-l-4 border-red-team rounded p-2 text-red-team">
                   <div>False Negative (FN)</div>
-                  <div className="text-lg font-black">{metricsData[activeTab === 'lr' ? 'Logistic Regression' : activeTab === 'rf' ? 'Random Forest' : 'XGBoost'].Confusion_Matrix.FN}</div>
+                  <div className="text-lg font-black">{metricsData[activeTab === 'lr' ? 'Logistic Regression' : activeTab === 'rf' ? 'Random Forest' : 'ensemble' ? 'Ensemble (Soft Voting)' : 'XGBoost']?.Confusion_Matrix.FN}</div>
                 </div>
                 <div className="bg-gold-main/5 border-l-4 border-gold-main rounded p-2 text-gold-bright">
                   <div>True Negative (TN)</div>
-                  <div className="text-lg font-black">{metricsData[activeTab === 'lr' ? 'Logistic Regression' : activeTab === 'rf' ? 'Random Forest' : 'XGBoost'].Confusion_Matrix.TN}</div>
+                  <div className="text-lg font-black">{metricsData[activeTab === 'lr' ? 'Logistic Regression' : activeTab === 'rf' ? 'Random Forest' : 'ensemble' ? 'Ensemble (Soft Voting)' : 'XGBoost']?.Confusion_Matrix.TN}</div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* 차트 시각화 영역 (7/12) */}
-          <div className="md:col-span-7 bg-white/[0.02] border border-white/5 rounded-2xl p-4 h-[350px]">
-            <h5 className="text-gold-main text-xs font-semibold mb-3 border-b border-white/5 pb-1">
-              {activeTab === 'lr' ? '가중치 계수 분석 (Coefficients)' : '피처 중요도 분석 (Feature Importance)'}
-            </h5>
-            <div className="h-[280px]">
-              <Bar
-                data={getChartData(activeTab === 'lr' ? 'Logistic Regression' : activeTab === 'rf' ? 'Random Forest' : 'XGBoost')}
-                options={chartOptions}
-              />
+          {/* 차트 및 앙상블 비주얼 영역 (7/12) */}
+          {activeTab === 'ensemble' ? (
+            <div className="md:col-span-7 bg-white/[0.02] border border-white/5 rounded-2xl p-5 h-[350px] flex flex-col justify-between">
+              <h5 className="text-gold-main text-xs font-semibold mb-3 border-b border-white/5 pb-1">
+                앙상블 소프트 보팅 메커니즘 & 가중치 비율 (Optuna 기반)
+              </h5>
+              <div className="flex-1 flex flex-col justify-center gap-4">
+                <p className="text-[11px] text-text-secondary leading-relaxed">
+                  앙상블 소프트 보팅(Soft Voting)은 단일 모델의 바이어스(Bias)를 최소화하고 일반화 성능을 높이기 위해, 각 모델의 예측 확률값에 가중치 비율을 곱해 최종 의사결정을 수행하는 보팅 기법입니다.
+                </p>
+                <div className="space-y-3.5">
+                  <div>
+                    <div className="flex justify-between text-[10px] font-bold mb-1.5">
+                      <span className="text-red-team">최적화 모델: XGBoost</span>
+                      <span className="text-text-primary">40% 가중치 (w = 0.40)</span>
+                    </div>
+                    <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                      <div className="bg-gradient-to-r from-red-team/80 to-red-team h-full shadow-[0_0_8px_rgba(232,64,87,0.3)] animate-pulse" style={{ width: '40%' }}></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between text-[10px] font-bold mb-1.5">
+                      <span className="text-gold-main">베이스라인: Logistic Regression</span>
+                      <span className="text-text-primary">40% 가중치 (w = 0.40)</span>
+                    </div>
+                    <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                      <div className="bg-gradient-to-r from-gold-main/80 to-gold-main h-full shadow-[0_0_8px_rgba(200,170,110,0.3)] animate-pulse" style={{ width: '40%' }}></div>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex justify-between text-[10px] font-bold mb-1.5">
+                      <span className="text-blue-team">비교 모델: Random Forest</span>
+                      <span className="text-text-primary">20% 가중치 (w = 0.20)</span>
+                    </div>
+                    <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                      <div className="bg-gradient-to-r from-blue-team/80 to-blue-team h-full shadow-[0_0_8px_rgba(31,142,206,0.3)] animate-pulse" style={{ width: '20%' }}></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="text-[8px] text-text-secondary/40 text-right mt-2">
+                * 위 가중치는 교차 검증(Stratified K-Fold CV) 성능 분석 및 분류 경계 특성을 복합 고려하여 최종 최적값으로 정의되었습니다.
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="md:col-span-7 bg-white/[0.02] border border-white/5 rounded-2xl p-4 h-[350px]">
+              <h5 className="text-gold-main text-xs font-semibold mb-3 border-b border-white/5 pb-1">
+                {activeTab === 'lr' ? '가중치 계수 분석 (Coefficients)' : '피처 중요도 분석 (Feature Importance)'}
+              </h5>
+              <div className="h-[280px]">
+                <Bar
+                  data={getChartData(activeTab === 'lr' ? 'Logistic Regression' : activeTab === 'rf' ? 'Random Forest' : 'XGBoost')}
+                  options={chartOptions}
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* 하위 요약 표 */}
@@ -1119,15 +1210,33 @@ export default function App() {
               </tr>
             </thead>
             <tbody className="text-text-secondary">
-              {Object.keys(metricsData).map(mKey => (
-                <tr key={mKey} className="border-b border-white/5 last:border-b-0">
-                  <td className="py-2.5"><span className={`px-2 py-0.5 rounded text-[10px] font-bold ${mKey === 'Logistic Regression' ? 'bg-gold-main/20 text-gold-bright border border-gold-main/40' : mKey === 'Random Forest' ? 'bg-blue-team/20 text-blue-team border border-blue-team/40' : 'bg-red-team/20 text-red-team border border-red-team/40'}`}>{mKey === 'Logistic Regression' ? '베이스라인' : mKey === 'Random Forest' ? '비교' : '최적화'}</span></td>
-                  <td className="py-2.5 font-bold text-text-primary">{mKey}</td>
-                  <td className="py-2.5">{(metricsData[mKey].Accuracy * 100).toFixed(1)}%</td>
-                  <td className="py-2.5">{(metricsData[mKey]['F1-Score'] * 100).toFixed(1)}%</td>
-                  <td className="py-2.5">{metricsData[mKey]['ROC-AUC'].toFixed(3)}</td>
-                </tr>
-              ))}
+              {Object.keys(metricsData).map(mKey => {
+                const getBadgeStyle = (key) => {
+                  if (key === 'Logistic Regression') return 'bg-gold-main/20 text-gold-bright border border-gold-main/40';
+                  if (key === 'Random Forest') return 'bg-blue-team/20 text-blue-team border border-blue-team/40';
+                  if (key === 'Ensemble (Soft Voting)') return 'bg-purple-500/20 text-purple-400 border border-purple-500/40';
+                  return 'bg-red-team/20 text-red-team border border-red-team/40';
+                };
+                const getBadgeLabel = (key) => {
+                  if (key === 'Logistic Regression') return '베이스라인';
+                  if (key === 'Random Forest') return '비교';
+                  if (key === 'Ensemble (Soft Voting)') return '종합(앙상블)';
+                  return '최적화';
+                };
+                return (
+                  <tr key={mKey} className="border-b border-white/5 last:border-b-0">
+                    <td className="py-2.5">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${getBadgeStyle(mKey)}`}>
+                        {getBadgeLabel(mKey)}
+                      </span>
+                    </td>
+                    <td className="py-2.5 font-bold text-text-primary">{mKey}</td>
+                    <td className="py-2.5">{(metricsData[mKey]?.Accuracy * 100).toFixed(1)}%</td>
+                    <td className="py-2.5">{(metricsData[mKey]?.['F1-Score'] * 100).toFixed(1)}%</td>
+                    <td className="py-2.5">{metricsData[mKey]?.['ROC-AUC'].toFixed(3)}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
