@@ -110,14 +110,31 @@
 │   ├── 📄 App.jsx              # 전체 마법공학 UI, 마커 핀 호버 인터랙션이 포함된 메인 컴포넌트
 │   ├── 📄 main.jsx             # React 마운트 엔트리 포인트
 │   └── 📄 index.css            # 글로벌 테마 스타일링 및 애니메이션 정의
-├── 📄 index.html               # Vite SPA 렌더링 템플릿
-├── 📄 package.json             # 노드 의존성 및 빌드 스크립트 설정
-├── 📄 tailwind.config.js       # 테마 컬러(gold-main, blue-team, red-team 등) 설정 파일
-├── 📄 vite.config.js           # Vite 번들러 세부 설정
-├── 📄 vercel.json              # Vercel SPA 라우팅 및 정적 호스팅 설정
-├── 📄 lol_clean_final.csv      # 모델 학습 원천 데이터셋 (공허 유충 지표 포함)
-├── 📄 train.py                 # 전처리 및 모델 학습 파이프라인의 메인 실행 스크립트
-└── 📄 README.md                # 전체 프로젝트 소개 및 가이드 문서 (본 문서)
+├── 📁 teamproject/             # 15분 마이그레이션 관련 원본 실험/분석 노트북 및 산출물 보관소
+│   ├── 📓 data.ipynb           # 학습용 원천 데이터 추출 및 분석 노트북
+│   ├── 📓 preprocessing.ipynb  # 데이터 전처리(결측치, 아웃라이어 정제 등) 실험 노트북
+│   ├── 📓 modeling.ipynb       # Optuna 튜닝 및 모델별(XGBoost 등) 학습 평가 노트북
+│   ├── 📓 insight.ipynb        # 게임 내 주요 지표 분포 및 변수 관계 시각화 노트북
+│   ├── 📓 insight_analysis.ipynb # 15분 승률 관련 EDA 및 상관분석 심화 노트북
+│   ├── 📄 lol_clean_final.csv  # 15분 전처리 완료된 원천 CSV 데이터셋
+│   ├── 📄 xgb_tuned.pkl        # Optuna로 최적 튜닝 완료된 XGBoost 모델 이진 파일 (Joblib)
+│   ├── 📄 report.md            # 분석 결과를 마크다운 형식으로 요약 정리한 연구 보고서
+│   ├── 📄 report.docx          # 최종 워드 보고서 문서
+│   ├── 📄 manual.docx          # 예측 프로그램 사용 설명 및 가이드라인 워드 문서
+│   ├── 📄 make_report_docx.py  # 분석 보고서 워드 파일 자동 생성 파이썬 스크립트
+│   └── 📄 make_manual_docx.py  # 사용 설명서 워드 파일 자동 생성 파이썬 스크립트
+├── 📄 index.html               # Vite SPA 렌더링 HTML 템플릿
+├── 📄 package.json             # 노드 의존성 패키지 및 빌드 스크립트 설정
+├── 📄 package-lock.json        # 노드 패키지 버전 잠금 파일
+├── 📄 postcss.config.js        # PostCSS 플러그인(Tailwind, Autoprefixer) 설정 파일
+├── 📄 tailwind.config.js       # Tailwind CSS 스타일 및 마법공학 테마 설정 파일
+├── 📄 vite.config.js           # Vite 개발 및 빌드 번들러 세부 설정
+├── 📄 vercel.json              # Vercel 배포 시 SPA 라우팅 및 정적 설정
+├── 📄 .gitignore               # Git 버전 관리에서 제외할 파일 설정 (models/*.joblib 등)
+├── 📄 .vercelignore            # Vercel 배포 시 업로드 제외 대상 지정 파일
+├── 📄 LICENSE                  # 오픈소스 라이선스 파일 (MIT License)
+├── 📄 lol_clean_final.csv      # train.py 학습에 사용되는 15분 로컬 CSV 데이터셋
+└── 📄 train.py                 # 전처리 및 모델 학습 파이프라인의 메인 실행 스크립트
 ```
 </details>
 
