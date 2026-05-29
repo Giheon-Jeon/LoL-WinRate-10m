@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Bar } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -10,7 +10,7 @@ import {
   Legend
 } from 'chart.js';
 import { X, Shield, Sword, Award, Eye, Coins, Trophy, Flame } from 'lucide-react';
-import { getChampionNameKr, calculateCompositionScores, determineComposition } from './utils/lolEngine';
+import { getChampionNameKr, calculateCompositionScores, determineComposition, CHAMPION_NAMES_KR } from './utils/lolEngine';
 import { runModelInference, calculateDragonGoldValue, calculateMLCompositionScore } from './utils/predictEngine';
 import metricsData from '../models/metrics.json';
 
@@ -29,6 +29,26 @@ const MODEL_OPTIONS = [
   { value: "Logistic Regression", label: "베이스라인: Logistic Regression" }
 ];
 
+// 맵 마커 위치 좌표
+const LANE_POSITIONS = {
+  blue: {
+    top: { top: '32%', left: '12%', label: '블루 탑', champIdx: 0 },
+    jungle: { top: '70%', left: '30%', label: '블루 정글', champIdx: 1 },
+    middle: { top: '58%', left: '42%', label: '블루 미드', champIdx: 2 },
+    bottom: { top: '88%', left: '68%', label: '블루 바텀', champIdx: 3 }
+  },
+  red: {
+    top: { top: '12%', left: '32%', label: '레드 탑', champIdx: 0 },
+    jungle: { top: '30%', left: '70%', label: '레드 정글', champIdx: 1 },
+    middle: { top: '42%', left: '58%', label: '레드 미드', champIdx: 2 },
+    bottom: { top: '68%', left: '88%', label: '레드 바텀', champIdx: 3 }
+  }
+};
+
+// 포지션별 라벨 및 기본 이모지 아이콘 정의
+const LANE_LABELS = ["탑", "정글", "미드", "바텀(원딜)", "서폿"];
+const LANE_ICONS = ["🛡️", "⚔️", "🔮", "🏹", "💚"];
+
 // 초기 라인 데이터 템플릿
 const INITIAL_LINE_STATS = {
   top: { gold: 3600, kills: 1, deaths: 1, assists: 0, cs: 50 },
@@ -44,6 +64,29 @@ export default function App() {
   const [blueLines, setBlueLines] = useState(JSON.parse(JSON.stringify(INITIAL_LINE_STATS)));
   const [redLines, setRedLines] = useState(JSON.parse(JSON.stringify(INITIAL_LINE_STATS)));
   
+  // 현재 활성화된 라인 팝오버 (null 또는 { team: 'blue'|'red', lane: 'top'|'jungle'|'middle'|'bottom' })
+  const [activePopover, setActivePopover] = useState(null);
+  
+  // 마우스 호버 상태 제어를 위한 타이머 Ref
+  const hoverTimeoutRef = useRef(null);
+
+  const handleMarkerMouseEnter = (team, lane) => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+    setActivePopover({ team, lane });
+  };
+
+  const handleMarkerMouseLeave = () => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+    }
+    hoverTimeoutRef.current = setTimeout(() => {
+      setActivePopover(null);
+    }, 250); // 250ms의 넉넉한 틈을 제공하여 부드러운 호버 전환 지원
+  };
+
   // 공통 오브젝트 및 시야 지표
   const [commonStats, setCommonStats] = useState({
     blueDragons: 0, redDragons: 0,
@@ -405,89 +448,191 @@ export default function App() {
     }
   };
 
-  // 라인 카드 렌더링용 내부 컴포넌트
-  const LineInputCard = ({ team, lane, title, positionStyles }) => {
+  // 라인별 맵 마커 컴포넌트
+  const MapMarker = ({ team, lane }) => {
     const isBlue = team === 'blue';
+    const pos = LANE_POSITIONS[team][lane];
     const lines = isBlue ? blueLines : redLines;
     const stats = lines[lane];
+    const champList = isBlue ? selectedBlueChampions : selectedRedChampions;
+    const champId = champList[pos.champIdx];
     
-    const cardBorderColor = isBlue 
-      ? 'border-blue-team/30 hover:border-blue-team shadow-[0_0_10px_rgba(31,142,206,0.15)]' 
-      : 'border-red-team/30 hover:border-red-team shadow-[0_0_10px_rgba(232,64,87,0.15)]';
+    // 포지션별 기본 이니셜
+    const getLaneInitial = (l) => {
+      switch (l) {
+        case 'top': return 'T';
+        case 'jungle': return 'J';
+        case 'middle': return 'M';
+        case 'bottom': return 'B';
+        default: return '';
+      }
+    };
+
+    // 골드 1,000단위 축약 (ex: 3600 -> 3.6k)
+    const formatGoldShort = (g) => {
+      return (g / 1000).toFixed(1) + 'k';
+    };
+
+    const teamColorClass = isBlue 
+      ? 'border-blue-team/70 text-blue-team shadow-[0_0_8px_rgba(31,142,206,0.2)] hover:border-blue-team hover:shadow-glow-blue' 
+      : 'border-red-team/70 text-red-team shadow-[0_0_8px_rgba(232,64,87,0.2)] hover:border-red-team hover:shadow-glow-red';
       
+    const isSelected = activePopover && activePopover.team === team && activePopover.lane === lane;
     const titleColor = isBlue ? 'text-blue-team' : 'text-red-team';
+    const cardBorderColor = isBlue ? 'border-blue-team/40 shadow-glow-blue' : 'border-red-team/40 shadow-glow-red';
+
+    // 좌우 배치 판단 (left%가 50 미만이면 팝오버를 마커 우측에, 50 이상이면 좌측에 배치)
+    const isLeftHalf = parseFloat(pos.left) < 50;
+    
+    // 상하 배치 판단 (top%가 30 미만이면 아래로 내리고, 70 초과면 위로 올리고, 그 외엔 중앙정렬)
+    const topPercent = parseFloat(pos.top);
+    let verticalOffsetClass = 'top-[-85px]';
+    if (topPercent < 30) {
+      verticalOffsetClass = 'top-[-10px]';
+    } else if (topPercent > 70) {
+      verticalOffsetClass = 'top-[-185px]';
+    }
+
+    const popoverPositionClass = isLeftHalf 
+      ? `left-[46px] ${verticalOffsetClass} origin-left` 
+      : `right-[46px] ${verticalOffsetClass} origin-right`;
 
     return (
-      <div className={`absolute bg-bg-card/95 border rounded-xl p-2.5 w-[205px] backdrop-blur-md transition-all duration-200 z-10 ${cardBorderColor} ${positionStyles}`}>
-        <div className="flex justify-between items-center text-[10px] font-bold border-b border-border-glass pb-1 mb-1.5">
-          <span className={`${titleColor} flex items-center gap-1`}>
-            {isBlue ? '🔵' : '🔴'} {title}
-          </span>
-          <span className="text-text-secondary/60 text-[9px]">{lane.toUpperCase()}</span>
+      <div
+        className={`absolute -translate-x-1/2 -translate-y-1/2 flex flex-col items-center cursor-pointer group select-none transition-all duration-200 hover:scale-105 ${
+          isSelected ? 'z-40' : 'z-10'
+        }`}
+        style={{ top: pos.top, left: pos.left }}
+        onMouseEnter={() => handleMarkerMouseEnter(team, lane)}
+        onMouseLeave={handleMarkerMouseLeave}
+      >
+        {/* 활성화 상태 핑 애니메이션 */}
+        {isSelected && (
+          <span className={`absolute top-0 w-[42px] h-[42px] rounded-full animate-ping opacity-40 ${isBlue ? 'bg-blue-team' : 'bg-red-team'}`} />
+        )}
+
+        {/* 핀 원형 버튼 */}
+        <div className={`w-[42px] h-[42px] rounded-full border-2 bg-bg-deep flex items-center justify-center overflow-hidden transition-all duration-300 ${
+          isSelected 
+            ? 'border-gold-main scale-105 shadow-glow-gold ring-2 ring-gold-main/30' 
+            : teamColorClass
+        }`}>
+          {champId ? (
+            <img
+              src={`https://ddragon.leagueoflegends.com/cdn/14.22.1/img/champion/${champId}.png`}
+              alt={champId}
+              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+            />
+          ) : (
+            <span className="font-outfit font-black text-sm tracking-tighter">
+              {getLaneInitial(lane)}
+            </span>
+          )}
         </div>
-        
-        <div className="flex flex-col gap-1.5 text-[10px]">
-          {/* KDA (킬 / 데스 / 어시) */}
-          <div className="flex justify-between items-center">
-            <span className="text-text-secondary">K / D / A</span>
-            <div className="flex gap-1 items-center">
-              <input
-                type="number"
-                min="0"
-                value={stats.kills}
-                onChange={(e) => handleLineStatChange(team, lane, 'kills', e.target.value)}
-                className="w-8 bg-black/60 border border-border-glass rounded text-center text-xs p-0.5 outline-none font-bold text-text-primary"
-              />
-              <span className="text-text-secondary/40">/</span>
-              <input
-                type="number"
-                min="0"
-                value={stats.deaths}
-                onChange={(e) => handleLineStatChange(team, lane, 'deaths', e.target.value)}
-                className="w-8 bg-black/60 border border-border-glass rounded text-center text-xs p-0.5 outline-none font-bold text-text-primary"
-              />
-              <span className="text-text-secondary/40">/</span>
-              <input
-                type="number"
-                min="0"
-                value={stats.assists}
-                onChange={(e) => handleLineStatChange(team, lane, 'assists', e.target.value)}
-                className="w-8 bg-black/60 border border-border-glass rounded text-center text-xs p-0.5 outline-none font-bold text-text-primary"
-              />
+
+        {/* 정보 요약 캡슐 뱃지 */}
+        <div className={`mt-1 px-1.5 py-0.5 rounded-full text-[8px] font-bold border backdrop-blur-md transition-all duration-300 ${
+          isSelected 
+            ? 'bg-gold-main/20 text-gold-bright border-gold-main/40 shadow-glow-gold' 
+            : 'bg-black/80 text-text-primary border-white/10 group-hover:border-white/20'
+        }`}>
+          {stats.kills}/{stats.deaths}/{stats.assists} • {formatGoldShort(stats.gold)}
+        </div>
+
+        {/* 상세 조작 팝오버 카드 (마커 호버 시 미려하게 오픈) */}
+        {isSelected && (
+          <div 
+            className={`absolute z-30 bg-bg-deep/95 border-2 rounded-2xl p-4 w-[250px] shadow-2xl backdrop-blur-xl transition-all duration-300 scale-100 ${popoverPositionClass} ${cardBorderColor}`}
+            onClick={(e) => e.stopPropagation()}
+            onMouseEnter={() => handleMarkerMouseEnter(team, lane)}
+            onMouseLeave={handleMarkerMouseLeave}
+          >
+            {/* 타이틀 */}
+            <div className="flex items-center gap-2 border-b border-white/10 pb-2 mb-3">
+              <span className={`w-2 h-2 rounded-full ${isBlue ? 'bg-blue-team shadow-[0_0_8px_#1f8ece]' : 'bg-red-team shadow-[0_0_8px_#e84057]'}`} />
+              <h4 className={`font-bold text-[11px] ${titleColor} flex items-center gap-1.5`}>
+                {pos.label} 지표 설정
+              </h4>
+              {champId && (
+                <span className="text-[9px] text-text-secondary">({getChampionNameKr(champId)})</span>
+              )}
+            </div>
+
+            <div className="flex flex-col gap-3 text-[10px]">
+              {/* K/D/A */}
+              <div className="flex justify-between items-center bg-white/[0.02] border border-white/5 rounded-xl p-2">
+                <span className="text-text-secondary font-semibold">K / D / A</span>
+                <div className="flex gap-1 items-center">
+                  <input
+                    type="number"
+                    min="0"
+                    value={stats.kills}
+                    onChange={(e) => handleLineStatChange(team, lane, 'kills', e.target.value)}
+                    className="w-7 bg-black/60 border border-border-glass rounded text-center text-xs p-0.5 outline-none font-bold text-text-primary"
+                  />
+                  <span className="text-text-secondary/30">/</span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={stats.deaths}
+                    onChange={(e) => handleLineStatChange(team, lane, 'deaths', e.target.value)}
+                    className="w-7 bg-black/60 border border-border-glass rounded text-center text-xs p-0.5 outline-none font-bold text-text-primary"
+                  />
+                  <span className="text-text-secondary/30">/</span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={stats.assists}
+                    onChange={(e) => handleLineStatChange(team, lane, 'assists', e.target.value)}
+                    className="w-7 bg-black/60 border border-border-glass rounded text-center text-xs p-0.5 outline-none font-bold text-text-primary"
+                  />
+                </div>
+              </div>
+
+              {/* CS */}
+              <div className="flex justify-between items-center bg-white/[0.02] border border-white/5 rounded-xl p-2">
+                <span className="text-text-secondary font-semibold">
+                  {lane === 'jungle' ? '정글 CS' : '라인 CS'}
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  value={stats.cs}
+                  onChange={(e) => handleLineStatChange(team, lane, 'cs', e.target.value)}
+                  className="w-10 bg-black/60 border border-border-glass rounded text-center text-xs p-0.5 outline-none font-bold text-text-primary"
+                />
+              </div>
+
+              {/* Gold */}
+              <div className="bg-white/[0.02] border border-white/5 rounded-xl p-2 flex flex-col gap-1.5">
+                <div className="flex justify-between items-center">
+                  <span className="text-text-secondary font-semibold">골드 획득량</span>
+                  <span className="text-gold-bright font-black text-[10px]">{stats.gold.toLocaleString()} G</span>
+                </div>
+                <input
+                  type="range"
+                  min="1000"
+                  max="20000"
+                  step="100"
+                  value={stats.gold}
+                  onChange={(e) => handleLineStatChange(team, lane, 'gold', e.target.value)}
+                  className="w-full h-1 bg-black/60 rounded-lg appearance-none cursor-pointer accent-gold-main"
+                />
+                <div className="flex justify-between text-[7px] text-text-secondary/30">
+                  <span>1k G</span>
+                  <span>20k G</span>
+                </div>
+              </div>
             </div>
           </div>
-
-          {/* CS 및 골드 */}
-          <div className="flex justify-between items-center">
-            <span className="text-text-secondary">{lane === 'jungle' ? '정글 몹 (CS)' : '미니언 (CS)'}</span>
-            <input
-              type="number"
-              min="0"
-              value={stats.cs}
-              onChange={(e) => handleLineStatChange(team, lane, 'cs', e.target.value)}
-              className="w-12 bg-black/60 border border-border-glass rounded text-center text-xs p-0.5 outline-none font-bold text-text-primary"
-            />
-          </div>
-
-          <div className="flex flex-col gap-0.5 mt-0.5">
-            <div className="flex justify-between text-[9px] text-text-secondary">
-              <span>골드 획득량</span>
-              <span className="text-gold-bright font-black">{stats.gold.toLocaleString()} G</span>
-            </div>
-            <input
-              type="range"
-              min="1000"
-              max="20000"
-              step="100"
-              value={stats.gold}
-              onChange={(e) => handleLineStatChange(team, lane, 'gold', e.target.value)}
-              className="h-1 cursor-pointer"
-            />
-          </div>
-        </div>
+        )}
       </div>
     );
   };
+
+  // 라인 상세 지표 설정 팝오버 (호버 인터랙션으로 전환되어 미사용)
+  const LinePopoverOverlay = () => null;
+
 
   return (
     <div className="container mx-auto max-w-6xl px-4 py-8 relative">
@@ -551,17 +696,20 @@ export default function App() {
                  backgroundPosition: 'center'
                }}>
             
-            {/* 블루팀 4개 패널 (좌하단 위주 배치) */}
-            <LineInputCard team="blue" lane="top" title="블루 탑" positionStyles="top-[18%] left-[4%]" />
-            <LineInputCard team="blue" lane="jungle" title="블루 정글" positionStyles="top-[52%] left-[10%]" />
-            <LineInputCard team="blue" lane="middle" title="블루 미드" positionStyles="top-[58%] left-[38%]" />
-            <LineInputCard team="blue" lane="bottom" title="블루 바텀" positionStyles="top-[82%] left-[45%]" />
+            {/* 블루팀 4개 마커 핀 */}
+            <MapMarker team="blue" lane="top" />
+            <MapMarker team="blue" lane="jungle" />
+            <MapMarker team="blue" lane="middle" />
+            <MapMarker team="blue" lane="bottom" />
 
-            {/* 레드팀 4개 패널 (우상단 위주 배치) */}
-            <LineInputCard team="red" lane="top" title="레드 탑" positionStyles="top-[5%] left-[45%]" />
-            <LineInputCard team="red" lane="jungle" title="레드 정글" positionStyles="top-[38%] left-[66%]" />
-            <LineInputCard team="red" lane="middle" title="레드 미드" positionStyles="top-[32%] left-[40%]" />
-            <LineInputCard team="red" lane="bottom" title="레드 바텀" positionStyles="top-[75%] left-[66%]" />
+            {/* 레드팀 4개 마커 핀 */}
+            <MapMarker team="red" lane="top" />
+            <MapMarker team="red" lane="jungle" />
+            <MapMarker team="red" lane="middle" />
+            <MapMarker team="red" lane="bottom" />
+
+            {/* 라인 지표 상세 설정 팝오버 */}
+            <LinePopoverOverlay />
 
           </div>
         </div>
@@ -596,8 +744,8 @@ export default function App() {
                       </>
                     ) : (
                       <>
-                        <span className="text-text-secondary text-sm group-hover:scale-110 transition duration-300">🛡️</span>
-                        <span className="text-[8px] text-text-secondary mt-1">포지션 {i + 1}</span>
+                        <span className="text-text-secondary text-sm group-hover:scale-110 transition duration-300">{LANE_ICONS[i]}</span>
+                        <span className="text-[9px] font-bold text-text-secondary mt-1">{LANE_LABELS[i]}</span>
                       </>
                     )}
                   </button>
@@ -628,8 +776,8 @@ export default function App() {
                       </>
                     ) : (
                       <>
-                        <span className="text-text-secondary text-sm group-hover:scale-110 transition duration-300">⚔️</span>
-                        <span className="text-[8px] text-text-secondary mt-1">포지션 {i + 1}</span>
+                        <span className="text-text-secondary text-sm group-hover:scale-110 transition duration-300">{LANE_ICONS[i]}</span>
+                        <span className="text-[9px] font-bold text-text-secondary mt-1">{LANE_LABELS[i]}</span>
                       </>
                     )}
                   </button>
@@ -939,7 +1087,7 @@ export default function App() {
             {/* 헤더 */}
             <div className="flex justify-between items-center px-6 py-4 border-b border-border-glass bg-gold-main/5">
               <h3 className="font-outfit font-bold text-gold-bright">
-                {activeSlot.team === 'blue' ? '블루팀' : '레드팀'} 포지션 {activeSlot.index + 1} 챔피언 선택
+                {activeSlot.team === 'blue' ? '블루팀' : '레드팀'} {LANE_LABELS[activeSlot.index]} 챔피언 선택
               </h3>
               <button onClick={() => setModalOpen(false)} className="text-text-secondary hover:text-white transition outline-none">
                 <X size={20} />
