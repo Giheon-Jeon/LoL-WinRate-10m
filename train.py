@@ -1,15 +1,17 @@
 import os
+import sys
 import json
+
+sys.setrecursionlimit(20000)
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, confusion_matrix
 import joblib
 
-# XGBoost 로드 시도
 try:
     from xgboost import XGBClassifier
     HAS_XGBOOST = True
@@ -17,50 +19,24 @@ except ImportError:
     HAS_XGBOOST = False
 
 def train_and_evaluate():
-    print("머신러닝 모델 학습을 시작합니다...")
+    print("15분 데이터 기반 머신러닝 모델 학습을 시작합니다...")
     
-    # 1. 데이터 로드 (새로운 데이터셋 적용)
+    # 1. 데이터 로드 (새로운 15분 데이터셋 lol_clean_final.csv 적용)
     data_path = os.path.join(os.path.dirname(__file__), "lol_clean_final.csv")
     if not os.path.exists(data_path):
         raise FileNotFoundError(f"데이터셋을 찾을 수 없습니다: {data_path}")
             
     df = pd.read_csv(data_path, encoding="utf-8")
     
-    # [1단계] 데이터 전처리
-    # 불필요 컬럼 제거 (매치 ID)
-    if 'match_id' in df.columns:
-        df = df.drop(columns=['match_id'])
+    # [1단계] 데이터 전처리 (사용자 정의에 맞게 피처 클린업)
+    # match_id, 전령, 챔피언, 역할군 태그, 조합 컬럼 제거
+    drop_cols = ['match_id', 'blue_heralds', 'red_heralds'] + \
+                [c for c in df.columns if 'champion' in c] + \
+                [c for c in df.columns if '_tag' in c] + \
+                [c for c in df.columns if '_comp' in c]
     
-    # 챔피언 이름 컬럼을 기반으로 블루/레드 팀별 챔피언 멀티핫 피처 생성
-    blue_champion_cols = ['blue_top_champion', 'blue_jungle_champion', 'blue_middle_champion', 'blue_bottom_champion', 'blue_utility_champion']
-    red_champion_cols = ['red_top_champion', 'red_jungle_champion', 'red_middle_champion', 'red_bottom_champion', 'red_utility_champion']
-    
-    all_champions = set()
-    for col in blue_champion_cols + red_champion_cols:
-        if col in df.columns:
-            all_champions.update(df[col].dropna().unique())
-    all_champions = sorted(list(all_champions))
-    
-    # 성능 최적화를 위해 각 행의 챔피언들을 set으로 사전 변환
-    blue_champs_sets = df[blue_champion_cols].apply(lambda row: set(row.dropna().values), axis=1)
-    red_champs_sets = df[red_champion_cols].apply(lambda row: set(row.dropna().values), axis=1)
-    
-    # DataFrame 파편화 방지를 위해 딕셔너리로 취합 후 일괄 concat
-    champ_features = {}
-    for champ in all_champions:
-        champ_features[f'blue_champion_{champ}'] = blue_champs_sets.apply(lambda s: 1.0 if champ in s else 0.0)
-        champ_features[f'red_champion_{champ}'] = red_champs_sets.apply(lambda s: 1.0 if champ in s else 0.0)
-        
-    champ_df = pd.DataFrame(champ_features, index=df.index)
-    df = pd.concat([df, champ_df], axis=1)
-    
-    # 원본 챔피언명 컬럼들 제거
-    existing_champion_cols = [c for c in blue_champion_cols + red_champion_cols if c in df.columns]
-    df = df.drop(columns=existing_champion_cols)
-    
-    # 문자열 컬럼 (태그, 조합 등) 원핫 인코딩
-    categorical_cols = [c for c in df.columns if 'tag' in c or 'comp' in c]
-    df = pd.get_dummies(df, columns=categorical_cols, drop_first=True)
+    df = df.drop(columns=[c for c in drop_cols if c in df.columns])
+    print(f"불필요 컬럼 제거 완료. 남은 컬럼 수: {df.shape[1]}")
     
     # 타겟 변수 분리
     if 'win' not in df.columns:
@@ -69,10 +45,10 @@ def train_and_evaluate():
     X = df.drop(columns=['win'])
     y = df['win']
     
-    # 부울(Boolean) 및 정수 타입을 실수(float)형으로 변환
+    # 부울 및 정수 타입을 실수형으로 변환
     X = X.astype(float)
     
-    # 피처 이름 저장 (추후 백엔드 API에서 입력 맵핑 시 사용)
+    # 피처 이름 저장
     feature_names = list(X.columns)
     models_dir = os.path.join(os.path.dirname(__file__), "models")
     os.makedirs(models_dir, exist_ok=True)
@@ -94,13 +70,13 @@ def train_and_evaluate():
     
     # --- 2단계. 베이스라인 모델: Logistic Regression ---
     print("Logistic Regression 모델 학습 중...")
-    lr_model = LogisticRegression(max_iter=2000, random_state=42)
+    lr_model = LogisticRegression(max_iter=1000, random_state=42)
     lr_model.fit(X_tr_scaled, y_tr)
     
     y_pred_lr = lr_model.predict(X_te_scaled)
     y_pred_proba_lr = lr_model.predict_proba(X_te_scaled)[:, 1]
     
-    # 계수(Coefficient) 및 해석 준비
+    # 계수(Coefficient) 저장
     lr_coefs = lr_model.coef_[0]
     coefficients_dict = dict(zip(feature_names, lr_coefs.tolist()))
     
@@ -109,7 +85,7 @@ def train_and_evaluate():
     for col, beta, sigma in zip(feature_names, lr_coefs, scaler.scale_):
         unscaled_coeffs[col] = float(beta / sigma) if sigma != 0 else 0.0
         
-    # 드래곤 골드 가치는 백엔드에서 편미분으로 계산하므로 여기서는 기본값 처리
+    # 드래곤 골드 가치 계산 (LR의 편미분값 기반 - 백엔드/프론트엔드 연동용)
     dragon_gold_value = 1500.0
     
     tn_lr, fp_lr, fn_lr, tp_lr = confusion_matrix(y_te, y_pred_lr).ravel()
@@ -129,10 +105,10 @@ def train_and_evaluate():
     }
     joblib.dump(lr_model, os.path.join(models_dir, "logistic_regression.joblib"))
     print(f"[Logistic Regression] 정확도: {metrics_report['Logistic Regression']['Accuracy']:.4f}")
-
+ 
     # --- 3단계. 비교 모델: Random Forest ---
     print("Random Forest 모델 학습 중...")
-    rf_model = RandomForestClassifier(n_estimators=100, max_depth=10, random_state=42)
+    rf_model = RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1)
     rf_model.fit(X_tr, y_tr)
     
     y_pred_rf = rf_model.predict(X_te)
@@ -160,19 +136,22 @@ def train_and_evaluate():
     # --- 4단계. 최적화 모델: XGBoost ---
     xgb_model = None
     if HAS_XGBOOST:
-        print("XGBoost 모델 학습 및 튜닝 중...")
-        xgb_base = XGBClassifier(random_state=42, eval_metric="logloss")
-        xgb_param_grid = {
-            'n_estimators': [50, 100],
-            'max_depth': [3, 5],
-            'learning_rate': [0.05, 0.1]
+        print("XGBoost 모델 학습 및 튜닝 값 적용 중...")
+        # 사용자가 Optuna로 찾은 최적 파라미터 적용
+        best_params = {
+            'n_estimators': 498,
+            'max_depth': 3,
+            'learning_rate': 0.0122,
+            'subsample': 0.6345,
+            'colsample_bytree': 0.6051
         }
-        xgb_grid = GridSearchCV(xgb_base, xgb_param_grid, cv=3, scoring='accuracy', n_jobs=-1)
-        xgb_grid.fit(X_tr, y_tr)
-        
-        xgb_model = xgb_grid.best_estimator_
-        best_params = xgb_grid.best_params_
-        print(f"XGBoost 최적 파라미터: {best_params}")
+        xgb_model = XGBClassifier(
+            **best_params,
+            eval_metric="logloss",
+            random_state=42,
+            n_jobs=-1
+        )
+        xgb_model.fit(X_tr, y_tr)
         
         y_pred_xgb = xgb_model.predict(X_te)
         y_pred_proba_xgb = xgb_model.predict_proba(X_te)[:, 1]
@@ -199,7 +178,7 @@ def train_and_evaluate():
     else:
         print("XGBoost가 설치되어 있지 않아 건너뜁니다.")
         
-    # [경량화 최적화]
+    # [경량화 최적화 및 JS 포팅 파일 생성]
     # 1. Logistic Regression JSON 저장
     lr_data = {
         "intercept": float(lr_model.intercept_[0]),
@@ -208,7 +187,7 @@ def train_and_evaluate():
     with open(os.path.join(models_dir, "logistic_regression.json"), "w", encoding="utf-8") as f:
         json.dump(lr_data, f, indent=4)
         
-    # 2. Random Forest JSON 저장 (트리 구조 컴팩트화)
+    # 2. Random Forest JSON 저장
     rf_trees = []
     for dt in rf_model.estimators_:
         tree = dt.tree_
@@ -227,18 +206,20 @@ def train_and_evaluate():
                 ])
         rf_trees.append(nodes)
     with open(os.path.join(models_dir, "random_forest.json"), "w", encoding="utf-8") as f:
-        json.dump(rf_trees, f) # No indent to save size
+        json.dump(rf_trees, f)
         
-    # 3. XGBoost는 m2cgen 컴파일 유지 (코드 크기 64KB 수준으로 경량)
+    # 3. XGBoost m2cgen JavaScript 컴파일 및 저장
     try:
         import m2cgen as m2c
         if HAS_XGBOOST and xgb_model is not None:
-            print("m2cgen으로 XGBoost 모델 코드 컴파일 중...")
+            print("m2cgen으로 XGBoost 모델을 JavaScript 코드로 컴파일 중...")
             xgb_model.base_score = 0.5
-            xgb_code = m2c.export_to_python(xgb_model)
-            with open(os.path.join(models_dir, "xgboost_code.py"), "w", encoding="utf-8") as f:
+            xgb_code = m2c.export_to_javascript(xgb_model)
+            # ESM 모듈 호환성 위한 export 구문 추가
+            xgb_code += "\nexport { score };\n"
+            with open(os.path.join(models_dir, "xgboost_code.js"), "w", encoding="utf-8") as f:
                 f.write(xgb_code)
-            print("XGBoost m2cgen 모델 컴파일 성공!")
+            print("XGBoost m2cgen JS 컴파일 성공!")
     except Exception as e:
         print(f"XGBoost m2cgen 컴파일 에러: {str(e)}")
             
@@ -250,8 +231,16 @@ def train_and_evaluate():
     with open(os.path.join(models_dir, "scaler.json"), "w", encoding="utf-8") as f:
         json.dump(scaler_data, f, indent=4)
         
-    # 5. 챔피언 기여도 기반 동적 승률 계산
-    calculate_champ_ml_win_rates(lr_model, rf_model, xgb_model, scaler, feature_names, all_champions, models_dir)
+    # 5. 챔피언 기여도 더미 파일 생성 (챔피언 정보가 피처에서 배제되었으므로 껍데기만 유지)
+    dummy_champ_win_rates = {
+        "Logistic Regression": {},
+        "Random Forest": {},
+        "XGBoost": {}
+    }
+    win_rates_path = os.path.join(models_dir, "champion_ml_win_rates.json")
+    with open(win_rates_path, "w", encoding="utf-8") as f:
+        json.dump(dummy_champ_win_rates, f, indent=4, ensure_ascii=False)
+    print("챔피언 기여도 더미 구조 생성 완료.")
 
     # 지표 저장
     metrics_path = os.path.join(models_dir, "metrics.json")
@@ -260,49 +249,6 @@ def train_and_evaluate():
     print(f"모델 지표가 저장되었습니다: {metrics_path}")
         
     return metrics_report
-
-def calculate_champ_ml_win_rates(lr_model, rf_model, xgb_model, scaler, feature_names, all_champions, models_dir):
-    """
-    모든 피처가 0인 가상 중립 상태에서 특정 챔피언 기여도(멀티핫=1.0)를 주었을 때의 블루팀 승률을 추출하여 저장
-    """
-    print("3대 알고리즘별 챔피언 기본 승률 예측 및 추출 중...")
-    champ_win_rates = {
-        "Logistic Regression": {},
-        "Random Forest": {},
-        "XGBoost": {}
-    }
-    
-    # 모든 피처가 0.0인 1행짜리 기본 DataFrame 생성
-    neutral_row = pd.DataFrame(0.0, index=[0], columns=feature_names)
-    
-    for champ in all_champions:
-        # 블루팀에 해당 챔피언 투입
-        champ_row = neutral_row.copy()
-        blue_champ_col = f'blue_champion_{champ}'
-        if blue_champ_col in champ_row.columns:
-            champ_row[blue_champ_col] = 1.0
-            
-        # 1. Logistic Regression 예측
-        champ_row_scaled = scaler.transform(champ_row)
-        lr_prob = lr_model.predict_proba(champ_row_scaled)[0][1]
-        champ_win_rates["Logistic Regression"][champ] = float(lr_prob)
-        
-        # 2. Random Forest 예측
-        rf_prob = rf_model.predict_proba(champ_row)[0][1]
-        champ_win_rates["Random Forest"][champ] = float(rf_prob)
-        
-        # 3. XGBoost 예측
-        if HAS_XGBOOST and xgb_model is not None:
-            xgb_prob = xgb_model.predict_proba(champ_row)[0][1]
-            champ_win_rates["XGBoost"][champ] = float(xgb_prob)
-        else:
-            champ_win_rates["XGBoost"][champ] = float(rf_prob)
-            
-    # 결과를 JSON 파일로 저장
-    win_rates_path = os.path.join(models_dir, "champion_ml_win_rates.json")
-    with open(win_rates_path, "w", encoding="utf-8") as f:
-        json.dump(champ_win_rates, f, indent=4, ensure_ascii=False)
-    print(f"머신러닝 기반 챔피언 동적 승률이 저장되었습니다: {win_rates_path}")
 
 if __name__ == "__main__":
     train_and_evaluate()

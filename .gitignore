@@ -49,3 +49,8 @@ __pycache__/
 
 # ML models (heavy binary weights)
 models/*.joblib
+
+# claude settings and workspaces
+.claude/
+teamproject/**/.DS_Store
+teamproject/**/.claude/

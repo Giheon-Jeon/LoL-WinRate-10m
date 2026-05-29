@@ -641,7 +641,7 @@ export default function App() {
           HEXTECH EARLY PREDICTOR
         </h1>
         <p className="text-gold-main text-xs font-semibold tracking-[0.25em] uppercase">
-          리그 오브 레전드 10분 지표 머신러닝 정밀 분석
+          리그 오브 레전드 15분 지표 머신러닝 정밀 분석
         </p>
       </header>
 
