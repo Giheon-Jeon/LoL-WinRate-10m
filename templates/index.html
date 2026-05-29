@@ -1671,6 +1671,16 @@
         renderDraftSlots();
         predict();
         
+        // 5개 챔피언이 모두 선택되어 있는지 검사
+        const currentTeamChamps = activeSlotTeam === 'blue' ? selectedBlueChampions : selectedRedChampions;
+        const allSelected = currentTeamChamps.every(c => c !== "");
+        
+        if (allSelected) {
+            // 모두 채워진 상태에서 중간 챔피언 변경 시 모달을 즉시 닫고 반환
+            closeChampionModal();
+            return;
+        }
+        
         // 다음 슬롯으로 자동 전환 (최대 5명 선택할 때까지 모달 유지)
         if (activeSlotIndex < 4) {
             activeSlotIndex++;
