@@ -10,8 +10,7 @@ import {
   Legend
 } from 'chart.js';
 import { X, Shield, Sword, Award, Eye, Coins, Trophy, Flame } from 'lucide-react';
-import { getChampionNameKr, calculateCompositionScores, determineComposition, CHAMPION_NAMES_KR } from './utils/lolEngine';
-import { runModelInference, calculateDragonGoldValue, calculateMLCompositionScore } from './utils/predictEngine';
+import { getChampionNameKr, calculateCompositionScores, determineComposition, CHAMPION_NAMES_KR, runModelInference, calculateDragonGoldValue, calculateMLCompositionScore } from './utils/lolEngine';
 import metricsData from '../models/metrics.json';
 
 ChartJS.register(
@@ -641,7 +640,7 @@ export default function App() {
           HEXTECH EARLY PREDICTOR
         </h1>
         <p className="text-gold-main text-xs font-semibold tracking-[0.25em] uppercase">
-          리그 오브 레전드 10분 지표 머신러닝 정밀 분석
+          리그 오브 레전드 15분 지표 머신러닝 정밀 분석
         </p>
       </header>
 

@@ -1,5 +1,5 @@
-# 💎 LoL Early WinRate Predictor (10m)
-## 리그 오브 레전드 다이아몬드+ 랭크 10분 지표 기반 실시간 승률 예측 솔루션
+# 💎 LoL Early WinRate Predictor (15m)
+## 리그 오브 레전드 다이아몬드+ 랭크 15분 지표 기반 실시간 승률 예측 솔루션
 
 <p align="center">
   <img width="170" height="170" alt="project_logo" src="https://raw.githubusercontent.com/Giheon-Jeon/LoL-WinRate-10m/main/static/hextech_logo.png" />
@@ -106,8 +106,7 @@
 │   └── 📄 champion_ml_win_rates.json # 알고리즘별 챔피언 기여도 기반 동적 승률 데이터
 ├── 📁 src/                     # React 소스코드 디렉터리
 │   ├── 📁 utils/               # 로컬 추론 및 시너지 계산용 JS 연산 유틸
-│   │   ├── 📄 lolEngine.js     # 한국어 챔피언 매핑, 시너지 및 카운터 계산 로직
-│   │   └── 📄 predictEngine.js # JS 포팅된 3대 머신러닝 로컬 추론 코어 코드
+│   │   └── 📄 lolEngine.js     # 챔피언 매핑, 시너지, 카운터 연산 및 머신러닝 추론 통합 코어
 │   ├── 📄 App.jsx              # 전체 마법공학 UI, 마커 핀 호버 인터랙션이 포함된 메인 컴포넌트
 │   ├── 📄 main.jsx             # React 마운트 엔트리 포인트
 │   └── 📄 index.css            # 글로벌 테마 스타일링 및 애니메이션 정의
@@ -125,7 +124,7 @@
 ### 주요 파일 역할 세부 설명
 
 * **`src/App.jsx`**: 애플리케이션의 컨트롤 타워입니다. 소환사의 협곡 맵 내부에 X-Y 스왑 대칭이 적용된 8개 라인 마커 핀을 렌더링하고, 호버 및 250ms의 넉넉한 디바운스 이탈 타이머로 구동되는 다이내믹 플로팅 설정 카드를 통합 관리합니다.
-* **`src/utils/predictEngine.js`**: JS 포팅 로직의 집약체입니다. 로지스틱 가중치 및 랜덤 포레스트 컴팩트 결정을 로컬 루프로 연산하며, 바인딩된 `xgboost_code.js` 함수를 호출하여 브라우저 로컬 환경 내 무의존성 예측을 가능케 합니다.
+* **`src/utils/lolEngine.js`**: 챔피언 메타데이터(시너지/카운터) 및 머신러닝 모델 추론 로직의 통합 코어입니다. 로지스틱 가중치 및 랜덤 포레스트 컴팩트 결정을 로컬 루프로 연산하며, 바인딩된 `xgboost_code.js` 함수를 호출하여 브라우저 로컬 환경 내 무의존성 예측을 가능케 합니다.
 * **`train.py`**: 파이썬 환경의 학습 스크립트입니다. 전처리를 통해 도출된 가중치와 노드 분기점 파라미터를 프론트엔드용 JSON 및 JS로 직렬화하여 추출합니다.
 
 ---
