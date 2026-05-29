@@ -28,24 +28,24 @@
 
 ## ✨ 주요 기능
 <details open>
-  <summary><b>1. Hextech UI/UX 대시보드</b></summary>
-  리그 오브 레전드의 마법공학 테마를 살린 프리미엄 웹 인터페이스입니다. 실시간 인터랙티브 모델 분석 대시보드를 제공하며 매끄러운 사용자 경험을 선사합니다.
+  <summary><b>1. Hextech UI/UX 대시보드 및 마커 핀 반응형 팝오버</b></summary>
+  소환사의 협곡 지도 위에 블루팀/레드팀이 완벽한 대각선 비주얼 대칭을 이루는 8개의 라인 마커 핀을 배치했습니다. 마커에 커서를 가까이 대면(Hover) 상세 지표 조작 창(KDA, CS, 골드 슬라이더)이 부드럽게 팝오버 형태로 띄워져 화면 가독성을 극대화한 프리미엄 인터페이스를 제공합니다.
 </details>
 <details open>
-  <summary><b>2. 3단계 머신러닝 다변화 엔진</b></summary>
-  베이스라인(로지스틱 회귀), 비교(랜덤 포레스트), 최적화(XGBoost GridSearch) 모델들을 활용해 정밀한 성능 검증 체계를 운영합니다.
+  <summary><b>2. 브라우저 로컬 머신러닝 실시간 추론 엔진</b></summary>
+  로지스틱 회귀 가중치와 랜덤 포레스트 의사결정 경로를 JavaScript 데이터셋 구조로 포팅하고, XGBoost 모델은 m2cgen 컴파일러로 자바스크립트 수식화하여 브라우저 로컬에서 서버 대기 없이 즉각적으로 승률 예측 연동을 수행합니다.
 </details>
 <details open>
   <summary><b>3. 데이터 기반 인사이트: 드래곤 골드 가치 환산</b></summary>
-  로지스틱 회귀 모델의 비표준화 계수 비율을 분석해 <b>"드래곤 1마리 ≈ 1,568 골드"</b>라는 실용적이고 직관적인 전략 지표를 도출합니다.
+  로지스틱 회귀 모델의 비표준화 계수 비율을 실시간 편미분 분석하여 <b>"드래곤 1마리 ≒ 1,500 내외 골드"</b>의 격차와 동일한 Odds 상승 효과를 가짐을 수치화해 전략적 인사이트를 제공합니다.
 </details>
 <details open>
   <summary><b>4. 인터랙티브 시각화 차트</b></summary>
   Chart.js를 활용하여 각 모델의 <b>혼동 행렬(Confusion Matrix) TP/TN/FP/FN</b>, 모델별 중요 피처 분포 및 양수/음수 계수 그래프를 다이내믹하게 렌더링합니다.
 </details>
 <details open>
-  <summary><b>5. Gemini 비전 스캔 연동</b></summary>
-  Google Gemini 2.0 Flash AI 비전 인식 기능을 활용하여 인게임 스크린샷에서 10분 지표를 자동 추출하고 입력 폼에 즉시 매핑합니다.
+  <summary><b>5. 챔피언 밴픽 조합 시너지 & 카운터 연동</b></summary>
+  "자야-라칸", "코그모-룰루" 등의 특수 라인 시너지와 "사일러스 ➔ 말파이트", "카사딘 ➔ 베이가" 등 한글화된 탑/정글/미드/바텀/서폿 포지션별 카운터 픽 상성을 실시간 리포트로 시각화합니다.
 </details>
 
 ---
@@ -64,78 +64,77 @@
 
 ## 🛠 기술 스택 및 선정 이유
 
-### Frontend / Backend
+### Frontend / Client-side ML
 <p>
-  <img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white" />
-  <img src="https://img.shields.io/badge/Flask-000000?style=for-the-badge&logo=flask&logoColor=white" />
-  <img src="https://img.shields.io/badge/NumPy-013243?style=for-the-badge&logo=numpy&logoColor=white" />
+  <img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" />
+  <img src="https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white" />
+  <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" />
+  <img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black" />
 </p>
 
-* **Python**: 강력한 데이터 분석 및 머신러닝 생태계를 활용할 수 있는 핵심 언어
-* **Flask**: API 서빙 및 정적 템플릿 렌더링에 적합한 가볍고 유연한 마이크로 프레임워크
-* **NumPy**: 입력 데이터의 실시간 변형, 배열 관리 및 백엔드 고성능 행렬 연산 처리
+* **React & Vite**: 빠르고 유연한 컴포넌트 렌더링 및 초고속 빌드 성능을 통한 최상의 핫 리로딩(HMR) 환경 제공
+* **Tailwind CSS**: 마법공학 테마의 다크 모드, 네온 섀도우 효과 및 미려한 글래스모피즘(Glassmorphism) 스타일을 구현하기 위한 다목적 스타일링 프레임워크
+* **Client-side ML (JS)**: 파이썬 모델 정보를 JS 코드로 최적 이식하여 백엔드 서버 없이 브라우저 단독으로 완전하고 보안성 높은 초고속 정적 배포 지원
 
-### ML 및 시각화
+### Python ML 파이프라인 (학습 전용)
 <p>
   <img src="https://img.shields.io/badge/scikit--learn-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white" />
   <img src="https://img.shields.io/badge/XGBoost-111111?style=for-the-badge&logo=xgboost&logoColor=white" />
-  <img src="https://img.shields.io/badge/Chart.js-FF6384?style=for-the-badge&logo=chartdotjs&logoColor=white" />
-  <img src="https://img.shields.io/badge/Google_Gemini-8E75B2?style=for-the-badge&logo=google-gemini&logoColor=white" />
 </p>
 
-* **Scikit-learn**: 데이터 표준화(StandardScaler), 로지스틱 회귀, 랜덤 포레스트 및 GridSearchCV 기반 하이퍼파라미터 튜닝 지원
-* **XGBoost**: 뛰어난 정형 데이터 예측력을 제공하는 부스팅 알고리즘으로 프로젝트 최고 성능 달성
-* **Chart.js**: 브라우저상에서 계수 분포, 중요도 순위, 혼동 행렬 등을 애니메이션과 함께 렌더링하는 경량 시각화 도구
-* **Google Gemini (2.0 Flash)**: 멀티모달 비전 인식을 통해 복잡한 게임 스크린샷 수치를 JSON 포맷으로 자동 변환
+* **Scikit-learn**: 데이터 표준화(StandardScaler), 로지스틱 회귀, 랜덤 포레스트 학습 및 가중치 추출용
+* **XGBoost**: 정형 데이터셋에서 최고 수준의 일반화 성능을 입증하는 앙상블 모델로 프로젝트 최적 성능 달성
 
 ---
 
 ## 🏗 아키텍처 및 폴더 구조 (상세)
 
-각 폴더와 파일의 역할(설명)을 토글로 구성하여 한눈에 파악할 수 있도록 작성되었습니다.
+각 폴더와 파일의 역할을 토글로 구성하여 한눈에 파악할 수 있도록 작성되었습니다.
 
 <details>
   <summary>📂 <b>전체 디렉터리 트리 보기</b></summary>
 
 ```text
 .
-├── 📁 models/                  # 학습 완료된 모델 파라미터 및 메타 데이터 저장소
-│   ├── 📄 feature_names.json   # 예측 시 사용되는 피처의 순서 정보 보장용
+├── 📁 models/                  # 학습 완료된 모델 파라미터 및 평가지표 저장소
+│   ├── 📄 feature_names.json   # 예측 시 사용되는 피처의 순서 정보
 │   ├── 📄 logistic_regression.json  # 로지스틱 회귀 학습 완료 가중치 및 절편 JSON
-│   ├── 📄 random_forest.json   # 랜덤 포레스트 컴팩트 트리 구조 JSON (경량화 최적화)
-│   ├── 📄 xgboost_code.py      # XGBoost m2cgen 컴파일 코드 (경량화 의존성 방지)
-│   ├── 📄 scaler.json          # 스케일링 평균/분산 정보의 JSON 버전 백업
-│   ├── 📄 metrics.json         # 각 모델의 성능 평가지표 (Accuracy, F1, ROC-AUC, CM, 계수 등) 기록
-│   └── 📄 champion_ml_win_rates.json # 3대 알고리즘별 챔피언 기여도 기반 동적 승률 데이터
-├── 📁 static/                  # 정적 파일(이미지, CSS 등)을 호스팅하기 위한 폴더
-├── 📁 templates/               # 프론트엔드 HTML 렌더링용 뷰(View) 템플릿
-│   └── 📄 index.html           # 대시보드 UI를 구성하는 마법공학 테마 SPA (Single Page Application)
-├── 📄 .gitignore               # Git 버전 관리에서 제외할 파일 및 폴더 (가상환경, 캐시 등)
-├── 📄 .vercelignore            # Vercel 클라우드 배포 시 번들 용량 최소화를 위해 무시할 파일 설정
-├── 📄 LICENSE                  # 프로젝트 라이선스 공시
-├── 📄 README.md                # 전체 프로젝트 소개 및 가이드 문서 (본 문서)
-├── 📄 app.py                   # Flask 메인 애플리케이션 (라우팅, API 서빙, 모델 추론 통합 뷰)
-├── 📄 lol_clean_final.csv      # 모델 학습 원천 데이터셋 (10분 구간 통계 및 챔피언 라인 매핑)
-├── 📄 requirements.txt         # 파이썬 패키지 의존성 목록 명세서 (Vercel 배포용)
+│   ├── 📄 random_forest.json   # 랜덤 포레스트 컴팩트 트리 구조 JSON
+│   ├── 📄 xgboost_code.js      # XGBoost m2cgen 컴파일 JavaScript 코드 (추론용)
+│   ├── 📄 scaler.json          # 스케일링 평균/분산 정보의 JSON 버전
+│   ├── 📄 metrics.json         # 각 모델의 성능 평가지표 (Accuracy, ROC-AUC 등)
+│   └── 📄 champion_ml_win_rates.json # 알고리즘별 챔피언 기여도 기반 동적 승률 데이터
+├── 📁 src/                     # React 소스코드 디렉터리
+│   ├── 📁 utils/               # 로컬 추론 및 시너지 계산용 JS 연산 유틸
+│   │   ├── 📄 lolEngine.js     # 한국어 챔피언 매핑, 시너지 및 카운터 계산 로직
+│   │   └── 📄 predictEngine.js # JS 포팅된 3대 머신러닝 로컬 추론 코어 코드
+│   ├── 📄 App.jsx              # 전체 마법공학 UI, 마커 핀 호버 인터랙션이 포함된 메인 컴포넌트
+│   ├── 📄 main.jsx             # React 마운트 엔트리 포인트
+│   └── 📄 index.css            # 글로벌 테마 스타일링 및 애니메이션 정의
+├── 📄 index.html               # Vite SPA 렌더링 템플릿
+├── 📄 package.json             # 노드 의존성 및 빌드 스크립트 설정
+├── 📄 tailwind.config.js       # 테마 컬러(gold-main, blue-team, red-team 등) 설정 파일
+├── 📄 vite.config.js           # Vite 번들러 세부 설정
+├── 📄 vercel.json              # Vercel SPA 라우팅 및 정적 호스팅 설정
+├── 📄 lol_clean_final.csv      # 모델 학습 원천 데이터셋 (공허 유충 지표 포함)
 ├── 📄 train.py                 # 전처리 및 모델 학습 파이프라인의 메인 실행 스크립트
-└── 📄 vercel.json              # Vercel 환경에서 Flask(Python) 서버리스 함수를 띄우기 위한 설정 파일
+└── 📄 README.md                # 전체 프로젝트 소개 및 가이드 문서 (본 문서)
 ```
 </details>
 
 ### 주요 파일 역할 세부 설명
 
-* **`app.py`**: 서버의 심장부로 클라이언트와의 HTTP 통신을 담당합니다. 챔피언 구성 요소가 통합되어 단일 파일로 동작하며, `/api/predict` 등의 엔드포인트를 열어 JSON 경량 모델들을 메모리에 로드하고 다이내믹하게 추론을 수행합니다.
-* **`train.py`**: 챔피언 멀티핫 인코딩 등 전처리를 거쳐 로지스틱 회귀와 랜덤 포레스트 모델의 핵심 정보를 경량 JSON 형식으로 직렬화 및 추출하고, XGBoost 모델은 m2cgen 컴파일러로 코드화합니다.
-* **`templates/index.html`**: UI/UX 디자인이 집약된 클라이언트 파일입니다. 차트 렌더링(Chart.js), 비동기 페칭, 스크린샷 업로드 파싱 등 모든 브라우저 상호작용이 여기서 이루어집니다.
-* **`vercel.json` & `.vercelignore`**: PaaS 플랫폼(Vercel)에 배포할 때, 정적 프론트엔드 호스팅이 아닌 Python Serverless Function으로 래핑(Wrapping)하기 위한 핵심 인프라 파일입니다. 번들 용량 한계(최대 250MB)를 피하기 위해 `.joblib` 바이너리 대신 경량화된 JSON 모델로 추론을 수행합니다.
+* **`src/App.jsx`**: 애플리케이션의 컨트롤 타워입니다. 소환사의 협곡 맵 내부에 X-Y 스왑 대칭이 적용된 8개 라인 마커 핀을 렌더링하고, 호버 및 250ms의 넉넉한 디바운스 이탈 타이머로 구동되는 다이내믹 플로팅 설정 카드를 통합 관리합니다.
+* **`src/utils/predictEngine.js`**: JS 포팅 로직의 집약체입니다. 로지스틱 가중치 및 랜덤 포레스트 컴팩트 결정을 로컬 루프로 연산하며, 바인딩된 `xgboost_code.js` 함수를 호출하여 브라우저 로컬 환경 내 무의존성 예측을 가능케 합니다.
+* **`train.py`**: 파이썬 환경의 학습 스크립트입니다. 전처리를 통해 도출된 가중치와 노드 분기점 파라미터를 프론트엔드용 JSON 및 JS로 직렬화하여 추출합니다.
 
 ---
 
 ## 🤝 협업 및 자동화 규칙
 
-* **Git Flow 전략**: `main` 브랜치를 기준으로 프로덕션 배포를 관리하며 기능 단위 패치 및 핫픽스 처리
-* **Commit Convention**: 협업 커밋 시 이모지 컨벤션(`✨ Feat`, `🐛 Fix`, `⚡️ Perf`, `♻️ Refactor`)을 준수하여 가독성 강화
-* **Bundle Optimization (최적화)**: Vercel 서버리스 배포 제한 용량(250MB)에 맞추기 위해 사용하지 않는 대용량 코드나 불필요한 모델 이력을 클린업하여 콜드스타트 지연 현상 및 배포 실패율 개선
+* **Git Flow 전략**: `main` 브랜치 직접 커밋을 금지하며, 개발 작업은 `BE-전기헌-이슈번호` 등의 피처 브랜치에서 진행 및 검증 후 머지
+* **Commit Convention**: 이모지와 태그 결합 컨벤션 준수 (`✨ Feat`, `💄 Design`, `♻️ Refactor` 등)
+* **정적 최적화**: Vercel을 통한 SPA 호스팅 빌드를 적극 권장하며, 배포 전 `npm run build` 정합성 및 린트 검증 필수 수행
 
 ---
 
@@ -154,7 +153,7 @@ graph TD
     
     F -- 로지스틱 회귀 전용 --> G[StandardScaler 표준화 적용]
     G --> H[Logistic Regression 학습]
-    H --> I[가중치/절편 추출 및 models/logistic_regression.json 직렬화]
+    G --> I[가중치/절편 추출 및 models/logistic_regression.json 직렬화]
     
     F -- 트리 기반 모델 --> J[원본 비스케일링 데이터 활용]
     J --> K[Random Forest 학습]
@@ -172,5 +171,5 @@ graph TD
   <summary><b>🔥 데이터 전처리 핵심 포인트</b></summary>
   
   1. **챔피언 멀티핫 인코딩**: 5개 라인별로 기입된 챔피언 이름을 양 팀 각각에 대해 160+개 챔피언 전체의 존재 여부(1.0 또는 0.0)로 매핑하는 멀티핫 인코딩을 적용해 모델이 챔피언 개별 특성과 승률 기여도를 효과적으로 포착할 수 있게 구성했습니다.
-  2. **JSON 경량 직렬화**: 수백 메가바이트의 라이브러리(`scikit-learn` 등)를 프로덕션 환경에 설치하는 의존성을 배제하기 위해, 학습 후 모델 가중치(로지스틱 회귀) 및 각 결정 트리 경로 분기 정보(랜덤 포레스트)를 순수한 JSON 구조로 덤프하여 무의존성 pure-Python 추론 환경을 완성했습니다.
+  2. **공허 유충 및 전령 지표 반영**: CSV 데이터셋 단계에서부터 `blue_voidgrubs`/`red_voidgrubs` 정보가 존재하며, 모델 피처에 정식 편입되어 드래곤 가치 환산과 함께 경기 예측의 주요 지표로 활용됩니다.
 </details>
