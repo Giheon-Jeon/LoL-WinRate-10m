@@ -107,6 +107,15 @@ export default function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('ensemble');
   
+  const activeMetricKey = activeTab === 'lr'
+    ? 'Logistic Regression'
+    : activeTab === 'rf'
+      ? 'Random Forest'
+      : activeTab === 'ensemble'
+        ? 'Ensemble (Soft Voting)'
+        : 'XGBoost';
+  const currentMetrics = metricsData[activeMetricKey];
+  
   const [prediction, setPrediction] = useState({
     prediction: 1,
     winner: "Blue",
@@ -1097,19 +1106,19 @@ export default function App() {
               <h5 className="text-gold-main text-xs font-semibold mb-3 border-b border-white/5 pb-1">평가 지표 (Test Metrics)</h5>
               <div className="grid grid-cols-2 gap-2 text-center">
                 <div className="bg-black/20 border border-white/5 rounded-lg p-2.5">
-                  <div className="text-xl font-black text-gold-bright">{(metricsData[activeTab === 'lr' ? 'Logistic Regression' : activeTab === 'rf' ? 'Random Forest' : 'ensemble' ? 'Ensemble (Soft Voting)' : 'XGBoost']?.Accuracy * 100).toFixed(1)}%</div>
+                  <div className="text-xl font-black text-gold-bright">{(currentMetrics?.Accuracy * 100).toFixed(1)}%</div>
                   <div className="text-[9px] text-text-secondary uppercase">Accuracy</div>
                 </div>
                 <div className="bg-black/20 border border-white/5 rounded-lg p-2.5">
-                  <div className="text-xl font-black text-gold-bright">{(metricsData[activeTab === 'lr' ? 'Logistic Regression' : activeTab === 'rf' ? 'Random Forest' : 'ensemble' ? 'Ensemble (Soft Voting)' : 'XGBoost']?.['F1-Score'] * 100).toFixed(1)}%</div>
+                  <div className="text-xl font-black text-gold-bright">{(currentMetrics?.['F1-Score'] * 100).toFixed(1)}%</div>
                   <div className="text-[9px] text-text-secondary uppercase">F1-Score</div>
                 </div>
                 <div className="bg-black/20 border border-white/5 rounded-lg p-2.5">
-                  <div className="text-xl font-black text-gold-bright">{metricsData[activeTab === 'lr' ? 'Logistic Regression' : activeTab === 'rf' ? 'Random Forest' : 'ensemble' ? 'Ensemble (Soft Voting)' : 'XGBoost']?.['ROC-AUC'].toFixed(3)}</div>
+                  <div className="text-xl font-black text-gold-bright">{currentMetrics?.['ROC-AUC'].toFixed(3)}</div>
                   <div className="text-[9px] text-text-secondary uppercase">ROC-AUC</div>
                 </div>
                 <div className="bg-black/20 border border-white/5 rounded-lg p-2.5">
-                  <div className="text-xl font-black text-gold-bright">{(metricsData[activeTab === 'lr' ? 'Logistic Regression' : activeTab === 'rf' ? 'Random Forest' : 'ensemble' ? 'Ensemble (Soft Voting)' : 'XGBoost']?.Precision * 100).toFixed(1)}%</div>
+                  <div className="text-xl font-black text-gold-bright">{(currentMetrics?.Precision * 100).toFixed(1)}%</div>
                   <div className="text-[9px] text-text-secondary uppercase">Precision</div>
                 </div>
               </div>
@@ -1120,19 +1129,19 @@ export default function App() {
               <div className="grid grid-cols-2 gap-2 text-[10px] text-center font-bold">
                 <div className="bg-blue-team/5 border-l-4 border-blue-team rounded p-2 text-blue-team">
                   <div>True Positive (TP)</div>
-                  <div className="text-lg font-black">{metricsData[activeTab === 'lr' ? 'Logistic Regression' : activeTab === 'rf' ? 'Random Forest' : 'ensemble' ? 'Ensemble (Soft Voting)' : 'XGBoost']?.Confusion_Matrix.TP}</div>
+                  <div className="text-lg font-black">{currentMetrics?.Confusion_Matrix.TP}</div>
                 </div>
                 <div className="bg-red-team/5 border-l-4 border-red-team rounded p-2 text-red-team">
                   <div>False Positive (FP)</div>
-                  <div className="text-lg font-black">{metricsData[activeTab === 'lr' ? 'Logistic Regression' : activeTab === 'rf' ? 'Random Forest' : 'ensemble' ? 'Ensemble (Soft Voting)' : 'XGBoost']?.Confusion_Matrix.FP}</div>
+                  <div className="text-lg font-black">{currentMetrics?.Confusion_Matrix.FP}</div>
                 </div>
                 <div className="bg-red-team/5 border-l-4 border-red-team rounded p-2 text-red-team">
                   <div>False Negative (FN)</div>
-                  <div className="text-lg font-black">{metricsData[activeTab === 'lr' ? 'Logistic Regression' : activeTab === 'rf' ? 'Random Forest' : 'ensemble' ? 'Ensemble (Soft Voting)' : 'XGBoost']?.Confusion_Matrix.FN}</div>
+                  <div className="text-lg font-black">{currentMetrics?.Confusion_Matrix.FN}</div>
                 </div>
                 <div className="bg-gold-main/5 border-l-4 border-gold-main rounded p-2 text-gold-bright">
                   <div>True Negative (TN)</div>
-                  <div className="text-lg font-black">{metricsData[activeTab === 'lr' ? 'Logistic Regression' : activeTab === 'rf' ? 'Random Forest' : 'ensemble' ? 'Ensemble (Soft Voting)' : 'XGBoost']?.Confusion_Matrix.TN}</div>
+                  <div className="text-lg font-black">{currentMetrics?.Confusion_Matrix.TN}</div>
                 </div>
               </div>
             </div>
