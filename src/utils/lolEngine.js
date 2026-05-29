@@ -553,3 +553,38 @@ export function predictMatch(modelName, rawInput, blueChamps, redChamps) {
         mlWinRates: mlWinRates
     };
 }
+
+// 앙상블 소프트 보팅 (Weighted Soft Voting)
+// LR 40% + XGBoost 40% + RF 20% 가중 평균
+export function ensembleSoftVoting(featureDict, weights = { lr: 0.4, xgb: 0.4, rf: 0.2 }) {
+    let lrProb, rfProb, xgbProb;
+    
+    try {
+        lrProb = runModelInference("Logistic Regression", featureDict);
+    } catch (e) {
+        lrProb = 0.5;
+    }
+    
+    try {
+        rfProb = runModelInference("Random Forest", featureDict);
+    } catch (e) {
+        rfProb = 0.5;
+    }
+    
+    try {
+        xgbProb = runModelInference("XGBoost", featureDict);
+    } catch (e) {
+        xgbProb = 0.5;
+    }
+    
+    const ensembleProb = weights.lr * lrProb + weights.xgb * xgbProb + weights.rf * rfProb;
+    
+    return {
+        ensemble_probability: ensembleProb,
+        individual: {
+            "Logistic Regression": lrProb,
+            "Random Forest": rfProb,
+            "XGBoost": xgbProb
+        }
+    };
+}

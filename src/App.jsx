@@ -10,7 +10,7 @@ import {
   Legend
 } from 'chart.js';
 import { X, Shield, Sword, Award, Eye, Coins, Trophy, Flame } from 'lucide-react';
-import { getChampionNameKr, calculateCompositionScores, determineComposition, CHAMPION_NAMES_KR, runModelInference, calculateDragonGoldValue, calculateMLCompositionScore } from './utils/lolEngine';
+import { getChampionNameKr, calculateCompositionScores, determineComposition, CHAMPION_NAMES_KR, runModelInference, calculateDragonGoldValue, calculateMLCompositionScore, ensembleSoftVoting } from './utils/lolEngine';
 import metricsData from '../models/metrics.json';
 
 ChartJS.register(
@@ -23,6 +23,7 @@ ChartJS.register(
 );
 
 const MODEL_OPTIONS = [
+  { value: "Ensemble", label: "🏆 앙상블: Soft Voting (추천)" },
   { value: "XGBoost", label: "최적화 모델: XGBoost" },
   { value: "Random Forest", label: "비교 모델: Random Forest" },
   { value: "Logistic Regression", label: "베이스라인: Logistic Regression" }
@@ -57,7 +58,7 @@ const INITIAL_LINE_STATS = {
 };
 
 export default function App() {
-  const [modelName, setModelName] = useState("XGBoost");
+  const [modelName, setModelName] = useState("Ensemble");
   
   // 블루팀/레드팀 라인별 개별 데이터 (8개 그리드)
   const [blueLines, setBlueLines] = useState(JSON.parse(JSON.stringify(INITIAL_LINE_STATS)));
@@ -116,7 +117,8 @@ export default function App() {
     red_comp_score: 0.50,
     blue_synergies: [],
     red_synergies: [],
-    counters: []
+    counters: [],
+    individualProbs: null
   });
 
   // 챔피언 목록 로드
@@ -223,6 +225,21 @@ export default function App() {
     featureDict['red_kills'] = redLines.top.kills + redLines.jungle.kills + redLines.middle.kills + redLines.bottom.kills;
     featureDict['red_voidgrubs'] = commonStats.redEliteMonsters;
 
+    // 상호작용 피처 (Interaction Features) 계산
+    const blueGoldTotal = featureDict['blue_top_gold'] + featureDict['blue_jungle_gold'] + featureDict['blue_middle_gold'] + featureDict['blue_bottom_gold'] + featureDict['blue_utility_gold'];
+    const redGoldTotal = featureDict['red_top_gold'] + featureDict['red_jungle_gold'] + featureDict['red_middle_gold'] + featureDict['red_bottom_gold'] + featureDict['red_utility_gold'];
+    featureDict['gold_ratio'] = blueGoldTotal / (blueGoldTotal + redGoldTotal + 1e-5);
+    featureDict['gold_diff_total'] = blueGoldTotal - redGoldTotal;
+
+    const blueCsTotal = featureDict['blue_top_cs'] + featureDict['blue_jungle_cs'] + featureDict['blue_middle_cs'] + featureDict['blue_bottom_cs'] + featureDict['blue_utility_cs'];
+    const redCsTotal = featureDict['red_top_cs'] + featureDict['red_jungle_cs'] + featureDict['red_middle_cs'] + featureDict['red_bottom_cs'] + featureDict['red_utility_cs'];
+    featureDict['cs_ratio'] = blueCsTotal / (blueCsTotal + redCsTotal + 1e-5);
+
+    featureDict['kills_ratio'] = featureDict['blue_kills'] / (featureDict['blue_kills'] + featureDict['red_kills'] + 1e-5);
+    featureDict['dragons_diff'] = featureDict['blue_dragons'] - featureDict['red_dragons'];
+    featureDict['towers_diff'] = featureDict['blue_towers'] - featureDict['red_towers'];
+    featureDict['voidgrubs_diff'] = featureDict['blue_voidgrubs'] - featureDict['red_voidgrubs'];
+
     // 2. 원핫 인코딩 피처 추가
     const blueChampsFull = [...selectedBlueChampions];
     const redChampsFull = [...selectedRedChampions];
@@ -250,20 +267,29 @@ export default function App() {
 
     // 3. 머신러닝 예측 수행
     let blueWinProb = 0.50;
+    let individualProbs = null;
     try {
-      blueWinProb = runModelInference(modelName, featureDict);
+      if (modelName === "Ensemble") {
+        const ensembleResult = ensembleSoftVoting(featureDict);
+        blueWinProb = ensembleResult.ensemble_probability;
+        individualProbs = ensembleResult.individual;
+      } else {
+        blueWinProb = runModelInference(modelName, featureDict);
+      }
     } catch (e) {}
     
     const redWinProb = 1.0 - blueWinProb;
     const predictionVal = blueWinProb >= 0.5 ? 1 : 0;
     
-    // 드래곤 가치 편미분 연산
-    const dragonGoldVal = calculateDragonGoldValue(modelName, featureDict);
+    // 드래곤 가치 편미분 연산 (앙상블 시 XGBoost 기준)
+    const dragonModelName = modelName === "Ensemble" ? "XGBoost" : modelName;
+    const dragonGoldVal = calculateDragonGoldValue(dragonModelName, featureDict);
     
     // 시너지 & 카운터픽 연산
     const compDetails = calculateCompositionScores(selectedBlueChampions, selectedRedChampions);
-    const mlBlueScore = calculateMLCompositionScore(modelName, selectedBlueChampions, []);
-    const mlRedScore = calculateMLCompositionScore(modelName, [], selectedRedChampions);
+    const compModelName = modelName === "Ensemble" ? "XGBoost" : modelName;
+    const mlBlueScore = calculateMLCompositionScore(compModelName, selectedBlueChampions, []);
+    const mlRedScore = calculateMLCompositionScore(compModelName, [], selectedRedChampions);
     
     setPrediction({
       prediction: predictionVal,
@@ -275,7 +301,8 @@ export default function App() {
       red_comp_score: mlRedScore,
       blue_synergies: compDetails.blue_synergies,
       red_synergies: compDetails.red_synergies,
-      counters: compDetails.counters
+      counters: compDetails.counters,
+      individualProbs: individualProbs
     });
   }, [modelName, blueLines, redLines, commonStats, selectedBlueChampions, selectedRedChampions]);
 
@@ -678,6 +705,34 @@ export default function App() {
             </select>
           </div>
         </div>
+
+        {/* 앙상블 개별 모델 기여도 표시 */}
+        {modelName === "Ensemble" && prediction.individualProbs && (
+          <div className="mt-5 pt-4 border-t border-white/5">
+            <div className="text-[10px] text-text-secondary uppercase tracking-widest mb-3 font-semibold">개별 모델 예측 기여도 (Soft Voting Breakdown)</div>
+            <div className="grid grid-cols-3 gap-3">
+              {Object.entries(prediction.individualProbs).map(([name, prob]) => {
+                const shortName = name === "Logistic Regression" ? "LR" : name === "Random Forest" ? "RF" : "XGB";
+                const weight = name === "Logistic Regression" ? "40%" : name === "Random Forest" ? "20%" : "40%";
+                const colorClass = name === "Logistic Regression" ? "border-gold-main/30" : name === "Random Forest" ? "border-blue-team/30" : "border-red-team/30";
+                const labelColor = name === "Logistic Regression" ? "text-gold-main" : name === "Random Forest" ? "text-blue-team" : "text-red-team";
+                return (
+                  <div key={name} className={`bg-white/[0.03] border ${colorClass} rounded-xl p-3 text-center transition hover:bg-white/[0.05]`}>
+                    <div className={`text-[11px] font-bold mb-1 ${labelColor}`}>{shortName} <span className="text-text-secondary/40 font-normal">({weight})</span></div>
+                    <div className={`text-xl font-black ${prob >= 0.5 ? 'text-blue-team' : 'text-red-team'}`}>
+                      {(prob * 100).toFixed(1)}%
+                    </div>
+                    <div className="h-1.5 bg-white/5 rounded-full overflow-hidden mt-2 flex">
+                      <div className="bg-blue-team/70 transition-all duration-500" style={{ width: `${prob * 100}%` }}></div>
+                      <div className="bg-red-team/70 flex-1"></div>
+                    </div>
+                    <div className="text-[8px] text-text-secondary/40 mt-1.5">{name}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 2. 🗺️ 소환사의 협곡 맵 내 지표 조작 (8개 라인 그리드 절대 좌표화) */}
