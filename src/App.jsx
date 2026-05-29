@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Bar } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -9,9 +9,9 @@ import {
   Tooltip,
   Legend
 } from 'chart.js';
-import { HelpCircle, RefreshCw, X, Shield, Sword, Award, Eye, Coins, Trophy, Flame } from 'lucide-react';
-import { getChampionNameKr, calculateCompositionScores, buildLaneFeatures, CHAMPION_NAMES_KR } from './utils/lolEngine';
-import { predictMatch, calculateMLCompositionScore } from './utils/predictEngine';
+import { X, Shield, Sword, Award, Eye, Coins, Trophy, Flame } from 'lucide-react';
+import { getChampionNameKr, calculateCompositionScores, determineComposition } from './utils/lolEngine';
+import { runModelInference, calculateDragonGoldValue, calculateMLCompositionScore } from './utils/predictEngine';
 import metricsData from '../models/metrics.json';
 
 ChartJS.register(
@@ -29,33 +29,41 @@ const MODEL_OPTIONS = [
   { value: "Logistic Regression", label: "베이스라인: Logistic Regression" }
 ];
 
+// 초기 라인 데이터 템플릿
+const INITIAL_LINE_STATS = {
+  top: { gold: 3600, kills: 1, deaths: 1, assists: 0, cs: 50 },
+  jungle: { gold: 3100, kills: 1, deaths: 1, assists: 1, cs: 45 },
+  middle: { gold: 3800, kills: 1, deaths: 1, assists: 1, cs: 55 },
+  bottom: { gold: 6000, kills: 2, deaths: 2, assists: 2, cs: 60 } // 바텀(원딜) + 유틸(서폿) 합산 듀오
+};
+
 export default function App() {
-  // 상태 변수 정의
   const [modelName, setModelName] = useState("XGBoost");
-  const [features, setFeatures] = useState({
-    blueWardsPlaced: 15, blueWardsDestroyed: 2, blueFirstBlood: 1, blueKills: 5, blueDeaths: 5, blueAssists: 5,
-    blueEliteMonsters: 0, blueDragons: 0, blueHeralds: 0, blueTowersDestroyed: 0, blueTotalGold: 16500, blueAvgLevel: 6.8,
-    blueTotalExperience: 18000, blueTotalMinionsKilled: 210, blueTotalJungleMinionsKilled: 50,
-    blueGoldDiff: 0, blueExperienceDiff: 0, blueCSPerMin: 21.0, blueGoldPerMin: 1650.0,
-    redWardsPlaced: 15, redWardsDestroyed: 2, redFirstBlood: 0, redKills: 5, redDeaths: 5, redAssists: 5,
-    redEliteMonsters: 0, redDragons: 0, redHeralds: 0, redTowersDestroyed: 0, redTotalGold: 16500, redAvgLevel: 6.8,
-    redTotalExperience: 18000, redTotalMinionsKilled: 210, redTotalJungleMinionsKilled: 50,
-    redGoldDiff: 0, redExperienceDiff: 0, redCSPerMin: 21.0, redGoldPerMin: 1650.0
+  
+  // 블루팀/레드팀 라인별 개별 데이터 (8개 그리드)
+  const [blueLines, setBlueLines] = useState(JSON.parse(JSON.stringify(INITIAL_LINE_STATS)));
+  const [redLines, setRedLines] = useState(JSON.parse(JSON.stringify(INITIAL_LINE_STATS)));
+  
+  // 공통 오브젝트 및 시야 지표
+  const [commonStats, setCommonStats] = useState({
+    blueDragons: 0, redDragons: 0,
+    blueHeralds: 0, redHeralds: 0,
+    blueEliteMonsters: 0, redEliteMonsters: 0, // Voidgrubs (유충)
+    blueTowersDestroyed: 0, redTowersDestroyed: 0,
+    blueWardsPlaced: 15, redWardsPlaced: 15,
+    blueWardsDestroyed: 2, redWardsDestroyed: 2,
+    blueFirstBlood: 1, redFirstBlood: 0
   });
 
   const [selectedBlueChampions, setSelectedBlueChampions] = useState(["", "", "", "", ""]);
   const [selectedRedChampions, setSelectedRedChampions] = useState(["", "", "", "", ""]);
   const [championsList, setChampionsList] = useState([]);
   
-  // 모달 상태
   const [modalOpen, setModalOpen] = useState(false);
   const [activeSlot, setActiveSlot] = useState({ team: 'blue', index: 0 });
   const [searchTerm, setSearchTerm] = useState('');
-  
-  // 분석 탭
   const [activeTab, setActiveTab] = useState('xgb');
   
-  // 예측 결과
   const [prediction, setPrediction] = useState({
     prediction: 1,
     winner: "Blue",
@@ -84,7 +92,6 @@ export default function App() {
         champs.sort((a, b) => a.name.localeCompare(b.name, 'ko'));
         setChampionsList(champs);
       } catch (e) {
-        // Fallback
         const fallback = Object.keys(CHAMPION_NAMES_KR).map(key => ({
           id: key,
           name: CHAMPION_NAMES_KR[key],
@@ -98,68 +105,163 @@ export default function App() {
     fetchChampions();
   }, []);
 
-  // 실시간 예측 수행
+  // 8개 라인 변경 시 모델 인풋 피처 매핑 & 실시간 예측 실행
   useEffect(() => {
-    const predResult = predictMatch(modelName, features, selectedBlueChampions, selectedRedChampions);
-    const compDetails = calculateCompositionScores(selectedBlueChampions, selectedRedChampions);
+    // 1. 피처 객체 빌드 (사용자 라인별 값 100% 매핑)
+    const featureDict = {};
     
-    // ML 기반 조합 점수 매핑
+    // 블루팀 매핑
+    featureDict['blue_top_gold'] = blueLines.top.gold;
+    featureDict['blue_top_cs'] = blueLines.top.cs;
+    featureDict['blue_top_kills'] = blueLines.top.kills;
+    featureDict['blue_top_deaths'] = blueLines.top.deaths;
+    
+    featureDict['blue_jungle_gold'] = blueLines.jungle.gold;
+    featureDict['blue_jungle_cs'] = blueLines.jungle.cs;
+    featureDict['blue_jungle_kills'] = blueLines.jungle.kills;
+    featureDict['blue_jungle_deaths'] = blueLines.jungle.deaths;
+    
+    featureDict['blue_middle_gold'] = blueLines.middle.gold;
+    featureDict['blue_middle_cs'] = blueLines.middle.cs;
+    featureDict['blue_middle_kills'] = blueLines.middle.kills;
+    featureDict['blue_middle_deaths'] = blueLines.middle.deaths;
+    
+    // 바텀 듀오 분배 (원딜 65%, 서폿 35% 골드 분배 / CS 원딜 95%, 서폿 5% 분배 / KDA 킬데스 분배)
+    featureDict['blue_bottom_gold'] = blueLines.bottom.gold * 0.65;
+    featureDict['blue_utility_gold'] = blueLines.bottom.gold * 0.35;
+    featureDict['blue_bottom_cs'] = blueLines.bottom.cs * 0.95;
+    featureDict['blue_utility_cs'] = blueLines.bottom.cs * 0.05;
+    featureDict['blue_bottom_kills'] = blueLines.bottom.kills * 0.8;
+    featureDict['blue_utility_kills'] = blueLines.bottom.kills * 0.2;
+    featureDict['blue_bottom_deaths'] = blueLines.bottom.deaths * 0.5;
+    featureDict['blue_utility_deaths'] = blueLines.bottom.deaths * 0.5;
+    
+    // 레드팀 매핑
+    featureDict['red_top_gold'] = redLines.top.gold;
+    featureDict['red_top_cs'] = redLines.top.cs;
+    featureDict['red_top_kills'] = redLines.top.kills;
+    featureDict['red_top_deaths'] = redLines.top.deaths;
+    
+    featureDict['red_jungle_gold'] = redLines.jungle.gold;
+    featureDict['red_jungle_cs'] = redLines.jungle.cs;
+    featureDict['red_jungle_kills'] = redLines.jungle.kills;
+    featureDict['red_jungle_deaths'] = redLines.jungle.deaths;
+    
+    featureDict['red_middle_gold'] = redLines.middle.gold;
+    featureDict['red_middle_cs'] = redLines.middle.cs;
+    featureDict['red_middle_kills'] = redLines.middle.kills;
+    featureDict['red_middle_deaths'] = redLines.middle.deaths;
+    
+    featureDict['red_bottom_gold'] = redLines.bottom.gold * 0.65;
+    featureDict['red_utility_gold'] = redLines.bottom.gold * 0.35;
+    featureDict['red_bottom_cs'] = redLines.bottom.cs * 0.95;
+    featureDict['red_utility_cs'] = redLines.bottom.cs * 0.05;
+    featureDict['red_bottom_kills'] = redLines.bottom.kills * 0.8;
+    featureDict['red_utility_kills'] = redLines.bottom.kills * 0.2;
+    featureDict['red_bottom_deaths'] = redLines.bottom.deaths * 0.5;
+    featureDict['red_utility_deaths'] = redLines.bottom.deaths * 0.5;
+    
+    // 격차(Diff) 매핑
+    const roles = ['top', 'jungle', 'middle', 'bottom', 'utility'];
+    roles.forEach(role => {
+      featureDict[`${role}_gold_diff`] = featureDict[`blue_${role}_gold`] - featureDict[`red_${role}_gold`];
+    });
+    
+    // 공통 오브젝트 매핑
+    featureDict['blue_dragons'] = commonStats.blueDragons;
+    featureDict['blue_heralds'] = commonStats.blueHeralds;
+    featureDict['blue_towers'] = commonStats.blueTowersDestroyed;
+    featureDict['blue_kills'] = blueLines.top.kills + blueLines.jungle.kills + blueLines.middle.kills + blueLines.bottom.kills;
+    featureDict['blue_firstBlood'] = commonStats.blueFirstBlood;
+    featureDict['blue_voidgrubs'] = commonStats.blueEliteMonsters;
+    
+    featureDict['red_dragons'] = commonStats.redDragons;
+    featureDict['red_heralds'] = commonStats.redHeralds;
+    featureDict['red_towers'] = commonStats.redTowersDestroyed;
+    featureDict['red_kills'] = redLines.top.kills + redLines.jungle.kills + redLines.middle.kills + redLines.bottom.kills;
+    featureDict['red_voidgrubs'] = commonStats.redEliteMonsters;
+
+    // 2. 원핫 인코딩 피처 추가
+    const blueChampsFull = [...selectedBlueChampions];
+    const redChampsFull = [...selectedRedChampions];
+    while (blueChampsFull.length < 5) blueChampsFull.push("");
+    while (redChampsFull.length < 5) redChampsFull.push("");
+    
+    const blueTags = blueChampsFull.map(c => c ? (CHAMPION_TAGS[c] || "Unknown") : "Unknown");
+    const redTags = redChampsFull.map(c => c ? (CHAMPION_TAGS[c] || "Unknown") : "Unknown");
+    const blueCompName = determineComposition(blueTags);
+    const redCompName = determineComposition(redTags);
+    
+    roles.forEach((role, i) => {
+      featureDict[`blue_${role}_tag_${blueTags[i]}`] = 1.0;
+      featureDict[`red_${role}_tag_${redTags[i]}`] = 1.0;
+    });
+    featureDict[`blue_comp_${blueCompName}`] = 1.0;
+    featureDict[`red_comp_${redCompName}`] = 1.0;
+    
+    blueChampsFull.forEach(c => {
+      if (c) featureDict[`blue_champion_${c}`] = 1.0;
+    });
+    redChampsFull.forEach(c => {
+      if (c) featureDict[`red_champion_${c}`] = 1.0;
+    });
+
+    // 3. 머신러닝 예측 수행
+    let blueWinProb = 0.50;
+    try {
+      blueWinProb = runModelInference(modelName, featureDict);
+    } catch (e) {}
+    
+    const redWinProb = 1.0 - blueWinProb;
+    const predictionVal = blueWinProb >= 0.5 ? 1 : 0;
+    
+    // 드래곤 가치 편미분 연산
+    const dragonGoldVal = calculateDragonGoldValue(modelName, featureDict);
+    
+    // 시너지 & 카운터픽 연산
+    const compDetails = calculateCompositionScores(selectedBlueChampions, selectedRedChampions);
     const mlBlueScore = calculateMLCompositionScore(modelName, selectedBlueChampions, []);
     const mlRedScore = calculateMLCompositionScore(modelName, [], selectedRedChampions);
     
     setPrediction({
-      ...predResult,
+      prediction: predictionVal,
+      winner: predictionVal === 1 ? "Blue" : "Red",
+      blue_win_probability: blueWinProb,
+      red_win_probability: redWinProb,
+      dragon_gold_value: dragonGoldVal,
       blue_comp_score: mlBlueScore,
       red_comp_score: mlRedScore,
       blue_synergies: compDetails.blue_synergies,
       red_synergies: compDetails.red_synergies,
       counters: compDetails.counters
     });
-  }, [modelName, features, selectedBlueChampions, selectedRedChampions]);
+  }, [modelName, blueLines, redLines, commonStats, selectedBlueChampions, selectedRedChampions]);
 
-  // 수치 업데이트 핸들러 (격차 계산 싱크)
-  const handleValChange = (id, value) => {
-    const val = parseFloat(value);
-    setFeatures(prev => {
-      const next = { ...prev, [id]: val };
-      
-      // 킬/데스 대칭 매핑
-      if (id === 'blueKills') next.redDeaths = val;
-      if (id === 'redDeaths') next.blueKills = val;
-      if (id === 'redKills') next.blueDeaths = val;
-      if (id === 'blueDeaths') next.redKills = val;
-      
-      // 골드 격차 및 분당 연산
-      if (id === 'blueTotalGold' || id === 'redTotalGold') {
-        const diff = next.blueTotalGold - next.redTotalGold;
-        next.blueGoldDiff = diff;
-        next.redGoldDiff = -diff;
-        next.blueGoldPerMin = next.blueTotalGold / 10.0;
-        next.redGoldPerMin = next.redTotalGold / 10.0;
-      }
-      
-      // 경험치 격차
-      if (id === 'blueTotalExperience' || id === 'redTotalExperience') {
-        const diff = next.blueTotalExperience - next.redTotalExperience;
-        next.blueExperienceDiff = diff;
-        next.redExperienceDiff = -diff;
-      }
-      
-      // CS 격차 분당 cs
-      if (id === 'blueTotalMinionsKilled') next.blueCSPerMin = val / 10.0;
-      if (id === 'redTotalMinionsKilled') next.redCSPerMin = val / 10.0;
-
-      return next;
-    });
+  // 개별 라인 데이터 수정 핸들러
+  const handleLineStatChange = (team, lane, statKey, value) => {
+    const val = parseFloat(value) || 0;
+    if (team === 'blue') {
+      setBlueLines(prev => ({
+        ...prev,
+        [lane]: { ...prev[lane], [statKey]: val }
+      }));
+    } else {
+      setRedLines(prev => ({
+        ...prev,
+        [lane]: { ...prev[lane], [statKey]: val }
+      }));
+    }
   };
 
-  // 퍼스트 블러드 설정
-  const handleFBChange = (team) => {
-    setFeatures(prev => ({
-      ...prev,
-      blueFirstBlood: team === 'blue' ? 1 : 0,
-      redFirstBlood: team === 'red' ? 1 : 0
-    }));
+  // 공통 오브젝트 지표 변경 핸들러
+  const handleCommonStatChange = (statKey, value) => {
+    const val = parseInt(value) || 0;
+    setCommonStats(prev => {
+      const next = { ...prev, [statKey]: val };
+      if (statKey === 'blueFirstBlood') next.redFirstBlood = val === 1 ? 0 : 1;
+      if (statKey === 'redFirstBlood') next.blueFirstBlood = val === 1 ? 0 : 1;
+      return next;
+    });
   };
 
   // 챔피언 선택 모달 제어
@@ -180,14 +282,10 @@ export default function App() {
       setSelectedRedChampions(list);
     }
     
-    // 완성형 체크 (모든 슬롯이 채워졌는지 검사)
     const allSelected = list.every(c => c !== "");
-    
     if (allSelected) {
-      // 5개 완성 시 모달 닫기
       setModalOpen(false);
     } else if (activeSlot.index < 4) {
-      // 다음 슬롯으로 자동 포커스
       setActiveSlot(prev => ({ ...prev, index: prev.index + 1 }));
       setSearchTerm('');
     } else {
@@ -213,6 +311,35 @@ export default function App() {
     } else {
       setSelectedRedChampions(["", "", "", "", ""]);
     }
+  };
+
+  // 챔피언 태그 데이터 맵핑
+  const CHAMPION_TAGS = {
+    "Aatrox": "Fighter", "Ahri": "Mage", "Akali": "Assassin", "Alistar": "Tank", "Amumu": "Tank",
+    "Anivia": "Mage", "Annie": "Mage", "Aphelios": "Marksman", "Ashe": "Marksman", "Azir": "Mage",
+    "Bard": "Support", "Belveth": "Fighter", "Blitzcrank": "Tank", "Brand": "Mage", "Braum": "Support",
+    "Caitlyn": "Marksman", "Camille": "Fighter", "Cassiopeia": "Mage", "Chogath": "Tank", "Darius": "Fighter",
+    "Diana": "Fighter", "DrMundo": "Fighter", "Draven": "Marksman", "Ekko": "Assassin", "Elise": "Mage",
+    "Evelynn": "Assassin", "Ezreal": "Marksman", "Fiora": "Fighter", "Fizz": "Assassin", "Galio": "Tank",
+    "Garen": "Fighter", "Gnar": "Fighter", "Gragas": "Fighter", "Graves": "Marksman", "Gwen": "Fighter",
+    "Hecarim": "Fighter", "Hwei": "Mage", "Irelia": "Fighter", "Janna": "Support", "JarvanIV": "Fighter",
+    "Jax": "Fighter", "Jayce": "Fighter", "Jhin": "Marksman", "Jinx": "Marksman", "Kaisa": "Marksman",
+    "Kalista": "Marksman", "Karma": "Mage", "Karthus": "Mage", "Kassadin": "Assassin", "Katarina": "Assassin",
+    "Kayn": "Fighter", "Khazix": "Assassin", "Kled": "Fighter", "KogMaw": "Marksman", "Leblanc": "Assassin",
+    "LeeSin": "Fighter", "Leona": "Tank", "Lillia": "Fighter", "Lucian": "Marksman", "Lulu": "Support",
+    "Lux": "Mage", "Malphite": "Tank", "Maokai": "Tank", "MasterYi": "Assassin", "Milio": "Support",
+    "MissFortune": "Marksman", "Mordekaiser": "Fighter", "Morgana": "Mage", "Nami": "Support", "Nasus": "Fighter",
+    "Nautilus": "Tank", "Nidalee": "Assassin", "Nocturne": "Assassin", "Olaf": "Fighter", "Orianna": "Mage",
+    "Ornn": "Tank", "Poppy": "Tank", "Pyke": "Assassin", "Rakan": "Support", "Rammus": "Tank",
+    "Renata": "Support", "Renekton": "Fighter", "Riven": "Fighter", "Rumble": "Fighter", "Ryze": "Mage",
+    "Samira": "Marksman", "Sejuani": "Tank", "Senna": "Marksman", "Sett": "Fighter", "Shaco": "Assassin",
+    "Shen": "Tank", "Sion": "Tank", "Sivir": "Marksman", "Sona": "Support", "Soraka": "Support",
+    "Sylas": "Mage", "Syndra": "Mage", "Taliyah": "Mage", "Talon": "Assassin", "Teemo": "Marksman",
+    "Thresh": "Support", "Tristana": "Marksman", "Trundle": "Fighter", "Twitch": "Marksman", "Varus": "Marksman",
+    "Vayne": "Marksman", "Veigar": "Mage", "Viego": "Fighter", "Viktor": "Mage", "Vladimir": "Mage",
+    "Volibear": "Fighter", "Warwick": "Fighter", "Xayah": "Marksman", "XinZhao": "Fighter", "Yasuo": "Fighter",
+    "Yone": "Assassin", "Yorick": "Fighter", "Yuumi": "Support", "Zac": "Tank", "Zed": "Assassin",
+    "Zeri": "Marksman", "Zoe": "Mage", "Zyra": "Mage"
   };
 
   // Chart Rendering Helper
@@ -278,6 +405,90 @@ export default function App() {
     }
   };
 
+  // 라인 카드 렌더링용 내부 컴포넌트
+  const LineInputCard = ({ team, lane, title, positionStyles }) => {
+    const isBlue = team === 'blue';
+    const lines = isBlue ? blueLines : redLines;
+    const stats = lines[lane];
+    
+    const cardBorderColor = isBlue 
+      ? 'border-blue-team/30 hover:border-blue-team shadow-[0_0_10px_rgba(31,142,206,0.15)]' 
+      : 'border-red-team/30 hover:border-red-team shadow-[0_0_10px_rgba(232,64,87,0.15)]';
+      
+    const titleColor = isBlue ? 'text-blue-team' : 'text-red-team';
+
+    return (
+      <div className={`absolute bg-bg-card/95 border rounded-xl p-2.5 w-[205px] backdrop-blur-md transition-all duration-200 z-10 ${cardBorderColor} ${positionStyles}`}>
+        <div className="flex justify-between items-center text-[10px] font-bold border-b border-border-glass pb-1 mb-1.5">
+          <span className={`${titleColor} flex items-center gap-1`}>
+            {isBlue ? '🔵' : '🔴'} {title}
+          </span>
+          <span className="text-text-secondary/60 text-[9px]">{lane.toUpperCase()}</span>
+        </div>
+        
+        <div className="flex flex-col gap-1.5 text-[10px]">
+          {/* KDA (킬 / 데스 / 어시) */}
+          <div className="flex justify-between items-center">
+            <span className="text-text-secondary">K / D / A</span>
+            <div className="flex gap-1 items-center">
+              <input
+                type="number"
+                min="0"
+                value={stats.kills}
+                onChange={(e) => handleLineStatChange(team, lane, 'kills', e.target.value)}
+                className="w-8 bg-black/60 border border-border-glass rounded text-center text-xs p-0.5 outline-none font-bold text-text-primary"
+              />
+              <span className="text-text-secondary/40">/</span>
+              <input
+                type="number"
+                min="0"
+                value={stats.deaths}
+                onChange={(e) => handleLineStatChange(team, lane, 'deaths', e.target.value)}
+                className="w-8 bg-black/60 border border-border-glass rounded text-center text-xs p-0.5 outline-none font-bold text-text-primary"
+              />
+              <span className="text-text-secondary/40">/</span>
+              <input
+                type="number"
+                min="0"
+                value={stats.assists}
+                onChange={(e) => handleLineStatChange(team, lane, 'assists', e.target.value)}
+                className="w-8 bg-black/60 border border-border-glass rounded text-center text-xs p-0.5 outline-none font-bold text-text-primary"
+              />
+            </div>
+          </div>
+
+          {/* CS 및 골드 */}
+          <div className="flex justify-between items-center">
+            <span className="text-text-secondary">{lane === 'jungle' ? '정글 몹 (CS)' : '미니언 (CS)'}</span>
+            <input
+              type="number"
+              min="0"
+              value={stats.cs}
+              onChange={(e) => handleLineStatChange(team, lane, 'cs', e.target.value)}
+              className="w-12 bg-black/60 border border-border-glass rounded text-center text-xs p-0.5 outline-none font-bold text-text-primary"
+            />
+          </div>
+
+          <div className="flex flex-col gap-0.5 mt-0.5">
+            <div className="flex justify-between text-[9px] text-text-secondary">
+              <span>골드 획득량</span>
+              <span className="text-gold-bright font-black">{stats.gold.toLocaleString()} G</span>
+            </div>
+            <input
+              type="range"
+              min="1000"
+              max="20000"
+              step="100"
+              value={stats.gold}
+              onChange={(e) => handleLineStatChange(team, lane, 'gold', e.target.value)}
+              className="h-1 cursor-pointer"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="container mx-auto max-w-6xl px-4 py-8 relative">
       <header className="text-center mb-8">
@@ -325,140 +536,38 @@ export default function App() {
         </div>
       </div>
 
-      <div className="flex gap-4 mb-8">
-        <button
-          onClick={() => handleFBChange('blue')}
-          className={`flex-1 py-3 border border-gold-dark/40 rounded-xl text-sm font-semibold transition ${features.blueFirstBlood === 1 ? 'bg-gold-main text-bg-deep shadow-glow-gold font-bold' : 'text-text-secondary hover:bg-white/5'}`}
-        >
-          🔵 블루팀 퍼스트 블러드 획득
-        </button>
-        <button
-          onClick={() => handleFBChange('red')}
-          className={`flex-1 py-3 border border-gold-dark/40 rounded-xl text-sm font-semibold transition ${features.redFirstBlood === 1 ? 'bg-gold-main text-bg-deep shadow-glow-gold font-bold' : 'text-text-secondary hover:bg-white/5'}`}
-        >
-          🔴 레드팀 퍼스트 블러드 획득
-        </button>
-      </div>
-
-      {/* 2. 🗺️ 소환사의 협곡 대시보드 맵 (핵심 시각화) */}
+      {/* 2. 🗺️ 소환사의 협곡 맵 내 지표 조작 (8개 라인 그리드 절대 좌표화) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-8">
-        {/* 소환사의 협곡 맵 영역 (7/12) */}
-        <div className="lg:col-span-7 bg-bg-card border border-border-glass rounded-3xl p-4 shadow-glow flex flex-col justify-center items-center relative overflow-hidden">
+        {/* 맵 컨테이너 (8/12) */}
+        <div className="lg:col-span-8 bg-bg-card border border-border-glass rounded-3xl p-4 shadow-glow flex flex-col justify-center items-center relative overflow-hidden">
           <h3 className="text-gold-bright mb-4 text-sm font-bold border-l-4 border-gold-main pl-3 self-start">
             🗺️ 소환사의 협곡 인게임 라인 지표 설정
           </h3>
           
-          <div className="w-full aspect-square max-w-[550px] relative rounded-2xl overflow-hidden border border-border-glass shadow-[0_0_20px_rgba(0,0,0,0.8)]"
+          <div className="w-full aspect-square max-w-[650px] relative rounded-2xl overflow-hidden border border-border-glass shadow-[0_0_20px_rgba(0,0,0,0.8)]"
                style={{
                  backgroundImage: 'url("https://ddragon.leagueoflegends.com/cdn/6.8.1/img/map/map11.png")',
                  backgroundSize: 'cover',
                  backgroundPosition: 'center'
                }}>
             
-            {/* 1. TOP 패널 */}
-            <div className="absolute top-[8%] left-[8%] bg-bg-card/95 border border-border-glass rounded-xl p-2.5 w-[200px] backdrop-blur-md shadow-glow hover:border-gold-main transition-all group">
-              <div className="flex justify-between items-center text-[10px] text-gold-main font-bold border-b border-border-glass pb-1 mb-1">
-                <span>📍 TOP LANE</span>
-                <span className="text-text-secondary group-hover:text-gold-bright transition">골드 / KDA</span>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-blue-team font-semibold">🔵 KDA</span>
-                  <div className="flex gap-1 items-center">
-                    <input type="number" value={features.blueKills} onChange={(e) => handleValChange('blueKills', e.target.value)} className="w-8 bg-black/60 border border-border-glass rounded text-center text-xs p-0.5 outline-none" />
-                    <span>/</span>
-                    <input type="number" value={features.blueDeaths} onChange={(e) => handleValChange('blueDeaths', e.target.value)} className="w-8 bg-black/60 border border-border-glass rounded text-center text-xs p-0.5 outline-none" />
-                  </div>
-                </div>
-                <div className="flex flex-col gap-0.5">
-                  <div className="flex justify-between text-[10px] text-text-secondary">
-                    <span>골드</span>
-                    <span className="text-gold-bright font-bold">{features.blueTotalGold.toLocaleString()} G</span>
-                  </div>
-                  <input type="range" min="5000" max="30000" step="100" value={features.blueTotalGold} onChange={(e) => handleValChange('blueTotalGold', e.target.value)} className="h-1" />
-                </div>
-              </div>
-            </div>
+            {/* 블루팀 4개 패널 (좌하단 위주 배치) */}
+            <LineInputCard team="blue" lane="top" title="블루 탑" positionStyles="top-[18%] left-[4%]" />
+            <LineInputCard team="blue" lane="jungle" title="블루 정글" positionStyles="top-[52%] left-[10%]" />
+            <LineInputCard team="blue" lane="middle" title="블루 미드" positionStyles="top-[58%] left-[38%]" />
+            <LineInputCard team="blue" lane="bottom" title="블루 바텀" positionStyles="top-[82%] left-[45%]" />
 
-            {/* 2. JUNGLE 패널 */}
-            <div className="absolute top-[35%] left-[22%] bg-bg-card/95 border border-border-glass rounded-xl p-2.5 w-[200px] backdrop-blur-md shadow-glow hover:border-gold-main transition-all group">
-              <div className="flex justify-between items-center text-[10px] text-gold-main font-bold border-b border-border-glass pb-1 mb-1">
-                <span>📍 JUNGLE</span>
-                <span className="text-text-secondary">오브젝트 / 골드</span>
-              </div>
-              <div className="flex flex-col gap-2">
-                <div className="flex justify-between items-center text-xs gap-1">
-                  <span className="text-gold-bright text-[10px]">🐉 용</span>
-                  <div className="flex gap-1">
-                    <button onClick={() => handleValChange('blueDragons', 0)} className={`px-1.5 py-0.5 rounded text-[9px] ${features.blueDragons === 0 ? 'bg-gold-main text-bg-deep font-bold' : 'bg-black/40 border border-border-glass'}`}>0</button>
-                    <button onClick={() => handleValChange('blueDragons', 1)} className={`px-1.5 py-0.5 rounded text-[9px] ${features.blueDragons === 1 ? 'bg-gold-main text-bg-deep font-bold' : 'bg-black/40 border border-border-glass'}`}>1</button>
-                    <button onClick={() => handleValChange('blueDragons', 2)} className={`px-1.5 py-0.5 rounded text-[9px] ${features.blueDragons === 2 ? 'bg-gold-main text-bg-deep font-bold' : 'bg-black/40 border border-border-glass'}`}>2</button>
-                  </div>
-                </div>
-                <div className="flex justify-between items-center text-xs gap-1">
-                  <span className="text-gold-bright text-[10px]">👾 유충</span>
-                  <input type="number" min="0" max="6" value={features.blueEliteMonsters} onChange={(e) => handleValChange('blueEliteMonsters', e.target.value)} className="w-8 bg-black/60 border border-border-glass rounded text-center text-[10px] p-0.5 outline-none" />
-                </div>
-                <div className="flex flex-col gap-0.5">
-                  <div className="flex justify-between text-[10px] text-text-secondary">
-                    <span>CS (정글)</span>
-                    <span className="text-gold-bright">{features.blueTotalJungleMinionsKilled}</span>
-                  </div>
-                  <input type="range" min="0" max="100" value={features.blueTotalJungleMinionsKilled} onChange={(e) => handleValChange('blueTotalJungleMinionsKilled', e.target.value)} className="h-1" />
-                </div>
-              </div>
-            </div>
-
-            {/* 3. MID 패널 */}
-            <div className="absolute top-[48%] right-[8%] bg-bg-card/95 border border-border-glass rounded-xl p-2.5 w-[200px] backdrop-blur-md shadow-glow hover:border-gold-main transition-all group">
-              <div className="flex justify-between items-center text-[10px] text-gold-main font-bold border-b border-border-glass pb-1 mb-1">
-                <span>📍 MID LANE</span>
-                <span className="text-text-secondary">골드 / CS</span>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <div className="flex justify-between text-xs">
-                  <span className="text-gold-bright text-[10px]">미니언 CS</span>
-                  <div className="flex items-center gap-1">
-                    <input type="number" min="0" max="300" value={features.blueTotalMinionsKilled} onChange={(e) => handleValChange('blueTotalMinionsKilled', e.target.value)} className="w-12 bg-black/60 border border-border-glass rounded text-center text-xs p-0.5 outline-none" />
-                  </div>
-                </div>
-                <div className="flex flex-col gap-0.5">
-                  <div className="flex justify-between text-[10px] text-text-secondary">
-                    <span>레드팀 골드</span>
-                    <span className="text-gold-bright font-bold">{features.redTotalGold.toLocaleString()} G</span>
-                  </div>
-                  <input type="range" min="5000" max="30000" step="100" value={features.redTotalGold} onChange={(e) => handleValChange('redTotalGold', e.target.value)} className="h-1" />
-                </div>
-              </div>
-            </div>
-
-            {/* 4. BOT 패널 */}
-            <div className="absolute bottom-[8%] right-[8%] bg-bg-card/95 border border-border-glass rounded-xl p-2.5 w-[200px] backdrop-blur-md shadow-glow hover:border-gold-main transition-all group">
-              <div className="flex justify-between items-center text-[10px] text-gold-main font-bold border-b border-border-glass pb-1 mb-1">
-                <span>📍 BOT LANE</span>
-                <span className="text-text-secondary">바텀 포탑 / 시야</span>
-              </div>
-              <div className="flex flex-col gap-2">
-                <div className="flex justify-between items-center text-xs gap-1">
-                  <span className="text-gold-bright text-[10px]">🏰 포탑 파괴</span>
-                  <div className="flex gap-1">
-                    <button onClick={() => handleValChange('blueTowersDestroyed', 0)} className={`px-1.5 py-0.5 rounded text-[9px] ${features.blueTowersDestroyed === 0 ? 'bg-gold-main text-bg-deep font-bold' : 'bg-black/40 border border-border-glass'}`}>0</button>
-                    <button onClick={() => handleValChange('blueTowersDestroyed', 1)} className={`px-1.5 py-0.5 rounded text-[9px] ${features.blueTowersDestroyed === 1 ? 'bg-gold-main text-bg-deep font-bold' : 'bg-black/40 border border-border-glass'}`}>1</button>
-                    <button onClick={() => handleValChange('blueTowersDestroyed', 2)} className={`px-1.5 py-0.5 rounded text-[9px] ${features.blueTowersDestroyed === 2 ? 'bg-gold-main text-bg-deep font-bold' : 'bg-black/40 border border-border-glass'}`}>2</button>
-                  </div>
-                </div>
-                <div className="flex justify-between items-center text-xs gap-1">
-                  <span className="text-gold-bright text-[10px]">👁️ 와드 설치</span>
-                  <input type="number" min="0" max="100" value={features.blueWardsPlaced} onChange={(e) => handleValChange('blueWardsPlaced', e.target.value)} className="w-12 bg-black/60 border border-border-glass rounded text-center text-xs p-0.5 outline-none" />
-                </div>
-              </div>
-            </div>
+            {/* 레드팀 4개 패널 (우상단 위주 배치) */}
+            <LineInputCard team="red" lane="top" title="레드 탑" positionStyles="top-[5%] left-[45%]" />
+            <LineInputCard team="red" lane="jungle" title="레드 정글" positionStyles="top-[38%] left-[66%]" />
+            <LineInputCard team="red" lane="middle" title="레드 미드" positionStyles="top-[32%] left-[40%]" />
+            <LineInputCard team="red" lane="bottom" title="레드 바텀" positionStyles="top-[75%] left-[66%]" />
 
           </div>
         </div>
 
-        {/* 밴픽 조합 설정 영역 (5/12) */}
-        <div className="lg:col-span-5 flex flex-col gap-6">
+        {/* 밴픽 조합 설정 영역 (4/12) */}
+        <div className="lg:col-span-4 flex flex-col gap-6">
           <div className="bg-bg-card border border-border-glass rounded-3xl p-6 shadow-glow flex-1">
             <h3 className="text-gold-bright mb-4 text-sm font-bold border-l-4 border-gold-main pl-3">
               🛡️ 챔피언 밴픽 조합 설정
@@ -478,7 +587,7 @@ export default function App() {
                   <button
                     key={`blue-slot-${i}`}
                     onClick={() => openModal('blue', i)}
-                    className={`aspect-square border border-border-glass rounded-xl overflow-hidden flex flex-col justify-center items-center bg-black/40 hover:border-blue-team hover:shadow-glow-blue transition group relative`}
+                    className="aspect-square border border-border-glass rounded-xl overflow-hidden flex flex-col justify-center items-center bg-black/40 hover:border-blue-team hover:shadow-glow-blue transition group relative"
                   >
                     {c ? (
                       <>
@@ -510,7 +619,7 @@ export default function App() {
                   <button
                     key={`red-slot-${i}`}
                     onClick={() => openModal('red', i)}
-                    className={`aspect-square border border-border-glass rounded-xl overflow-hidden flex flex-col justify-center items-center bg-black/40 hover:border-red-team hover:shadow-glow-red transition group relative`}
+                    className="aspect-square border border-border-glass rounded-xl overflow-hidden flex flex-col justify-center items-center bg-black/40 hover:border-red-team hover:shadow-glow-red transition group relative"
                   >
                     {c ? (
                       <>
@@ -530,7 +639,7 @@ export default function App() {
 
             {/* 시너지 효과 & 상성 리포트 패널 */}
             {(prediction.blue_synergies.length > 0 || prediction.red_synergies.length > 0 || prediction.counters.length > 0) ? (
-              <div className="border-t border-border-glass pt-4 mt-4 grid grid-cols-2 gap-4 text-[10px]">
+              <div className="border-t border-border-glass pt-4 mt-4 grid grid-cols-1 gap-3.5 text-[10px]">
                 <div className="bg-blue-team/5 border border-blue-team/10 rounded-xl p-3 flex flex-col gap-2">
                   <h5 className="text-blue-team font-bold text-xs">🔵 블루 시너지 / 상성</h5>
                   <ul className="list-none flex flex-col gap-1.5 text-text-secondary">
@@ -569,22 +678,160 @@ export default function App() {
         </div>
       </div>
 
-      {/* 3. 드래곤 가치 환산 정보 배너 */}
-      {features.blueDragons !== features.redDragons && (
-        <div className="bg-gradient-to-r from-gold-dark/10 via-bg-card to-gold-dark/10 border border-border-glass rounded-2xl p-5 mb-8 shadow-glow flex items-center gap-4 animate-fade-in">
+      {/* 3. 🔮 공통 경기 오브젝트 및 시야 지표 설정 패널 (추가 요구사항) */}
+      <div className="bg-bg-card border border-border-glass rounded-3xl p-6 mb-8 shadow-glow">
+        <h3 className="text-gold-bright mb-6 text-sm font-bold border-l-4 border-gold-main pl-3">
+          🔮 공통 경기 오브젝트 및 시야 지표 설정
+        </h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 text-xs">
+          {/* 오브젝트 설정 (용 / 전령 / 유충) */}
+          <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 flex flex-col gap-4">
+            <h4 className="text-gold-main font-bold border-b border-white/5 pb-1 flex items-center gap-1.5"><Trophy size={14} /> 에픽 몬스터 오브젝트</h4>
+            
+            <div className="flex flex-col gap-3">
+              <div className="flex justify-between items-center">
+                <span>🐉 블루팀 드래곤</span>
+                <div className="flex gap-1.5">
+                  {[0, 1, 2].map(n => (
+                    <button key={`b-drag-${n}`} onClick={() => handleCommonStatChange('blueDragons', n)} className={`px-2.5 py-1 rounded-lg font-bold transition ${commonStats.blueDragons === n ? 'bg-blue-team text-white shadow-glow-blue' : 'bg-black/40 border border-border-glass text-text-secondary'}`}>{n}</button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span>🐉 레드팀 드래곤</span>
+                <div className="flex gap-1.5">
+                  {[0, 1, 2].map(n => (
+                    <button key={`r-drag-${n}`} onClick={() => handleCommonStatChange('redDragons', n)} className={`px-2.5 py-1 rounded-lg font-bold transition ${commonStats.redDragons === n ? 'bg-red-team text-white shadow-glow-red' : 'bg-black/40 border border-border-glass text-text-secondary'}`}>{n}</button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center border-t border-white/5 pt-3">
+                <span>👾 공통 공허 유충 처치 (0~6)</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="6"
+                  value={commonStats.blueEliteMonsters}
+                  onChange={(e) => handleCommonStatChange('blueEliteMonsters', e.target.value)}
+                  className="w-12 bg-black/60 border border-border-glass rounded text-center text-xs p-1 outline-none font-bold text-text-primary"
+                />
+              </div>
+
+              <div className="flex justify-between items-center">
+                <span>👾 협곡의 전령 처치 (0~1)</span>
+                <div className="flex gap-1.5">
+                  <span>블루:</span>
+                  <button onClick={() => handleCommonStatChange('blueHeralds', commonStats.blueHeralds === 1 ? 0 : 1)} className={`px-2 py-0.5 rounded text-[10px] ${commonStats.blueHeralds === 1 ? 'bg-blue-team text-white' : 'bg-black/40 border'}`}>획득</button>
+                  <span>레드:</span>
+                  <button onClick={() => handleCommonStatChange('redHeralds', commonStats.redHeralds === 1 ? 0 : 1)} className={`px-2 py-0.5 rounded text-[10px] ${commonStats.redHeralds === 1 ? 'bg-red-team text-white' : 'bg-black/40 border'}`}>획득</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 포탑 파괴 및 선취점 */}
+          <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 flex flex-col gap-4">
+            <h4 className="text-gold-main font-bold border-b border-white/5 pb-1 flex items-center gap-1.5"><Shield size={14} /> 구조물 및 퍼스트 블러드</h4>
+            
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5">
+                <div className="flex justify-between">
+                  <span>블루팀 포탑 파괴 수</span>
+                  <span className="text-gold-bright font-bold">{commonStats.blueTowersDestroyed} 개</span>
+                </div>
+                <input type="range" min="0" max="5" value={commonStats.blueTowersDestroyed} onChange={(e) => handleCommonStatChange('blueTowersDestroyed', e.target.value)} className="h-1 cursor-pointer" />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <div className="flex justify-between">
+                  <span>레드팀 포탑 파괴 수</span>
+                  <span className="text-gold-bright font-bold">{commonStats.redTowersDestroyed} 개</span>
+                </div>
+                <input type="range" min="0" max="5" value={commonStats.redTowersDestroyed} onChange={(e) => handleCommonStatChange('redTowersDestroyed', e.target.value)} className="h-1 cursor-pointer" />
+              </div>
+
+              <div className="flex justify-between items-center border-t border-white/5 pt-3">
+                <span>💥 선취점 (First Blood)</span>
+                <div className="flex gap-1.5">
+                  <button onClick={() => handleCommonStatChange('blueFirstBlood', 1)} className={`px-3 py-1 rounded-lg transition font-bold ${commonStats.blueFirstBlood === 1 ? 'bg-blue-team text-white shadow-glow-blue' : 'bg-black/40 border border-border-glass text-text-secondary'}`}>블루</button>
+                  <button onClick={() => handleCommonStatChange('redFirstBlood', 1)} className={`px-3 py-1 rounded-lg transition font-bold ${commonStats.redFirstBlood === 1 ? 'bg-red-team text-white shadow-glow-red' : 'bg-black/40 border border-border-glass text-text-secondary'}`}>레드</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 시야 및 와드 지표 */}
+          <div className="bg-white/[0.02] border border-white/5 rounded-2xl p-4 flex flex-col gap-4">
+            <h4 className="text-gold-main font-bold border-b border-white/5 pb-1 flex items-center gap-1.5"><Eye size={14} /> 시야 및 와드 수치</h4>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <span>👁️ 블루 와드 설치</span>
+                <input
+                  type="number"
+                  min="0"
+                  value={commonStats.blueWardsPlaced}
+                  onChange={(e) => handleCommonStatChange('blueWardsPlaced', e.target.value)}
+                  className="w-full bg-black/60 border border-border-glass rounded px-2.5 py-1 outline-none font-bold text-text-primary text-center"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <span>👁️ 레드 와드 설치</span>
+                <input
+                  type="number"
+                  min="0"
+                  value={commonStats.redWardsPlaced}
+                  onChange={(e) => handleCommonStatChange('redWardsPlaced', e.target.value)}
+                  className="w-full bg-black/60 border border-border-glass rounded px-2.5 py-1 outline-none font-bold text-text-primary text-center"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5 border-t border-white/5 pt-2">
+                <span>❌ 블루 와드 제거</span>
+                <input
+                  type="number"
+                  min="0"
+                  value={commonStats.blueWardsDestroyed}
+                  onChange={(e) => handleCommonStatChange('blueWardsDestroyed', e.target.value)}
+                  className="w-full bg-black/60 border border-border-glass rounded px-2.5 py-1 outline-none font-bold text-text-primary text-center"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5 border-t border-white/5 pt-2">
+                <span>❌ 레드 와드 제거</span>
+                <input
+                  type="number"
+                  min="0"
+                  value={commonStats.redWardsDestroyed}
+                  onChange={(e) => handleCommonStatChange('redWardsDestroyed', e.target.value)}
+                  className="w-full bg-black/60 border border-border-glass rounded px-2.5 py-1 outline-none font-bold text-text-primary text-center"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. 드래곤 가치 환산 정보 배너 */}
+      {commonStats.blueDragons !== commonStats.redDragons && (
+        <div className="bg-gradient-to-r from-gold-dark/10 via-bg-card to-gold-dark/10 border border-border-glass rounded-2xl p-5 mb-8 shadow-glow flex items-center gap-4">
           <span className="text-4xl filter drop-shadow-[0_0_8px_rgba(200,170,110,0.5)]">🐉</span>
           <div>
             <h4 className="font-outfit font-bold text-sm text-gold-bright mb-1 uppercase tracking-wider">
-              {features.blueDragons > features.redDragons ? '블루팀' : '레드팀'} 드래곤 가치 환산
+              {commonStats.blueDragons > commonStats.redDragons ? '블루팀' : '레드팀'} 드래곤 가치 환산
             </h4>
             <p className="text-xs text-text-secondary leading-relaxed">
-              {modelName} 분석 결과, {features.blueDragons > features.redDragons ? '블루팀' : '레드팀'}이 획득한 드래곤은 게임 승률 관점에서 약 <strong className="text-gold-main font-extrabold text-shadow-glow">{(prediction.dragon_gold_value * Math.max(features.blueDragons, features.redDragons)).toLocaleString()} 골드</strong>(1마리당 약 {Math.round(prediction.dragon_gold_value).toLocaleString()} 골드)의 격차를 벌린 것과 동일한 Odds 상승 효과를 가집니다.
+              {modelName} 분석 결과, {commonStats.blueDragons > commonStats.redDragons ? '블루팀' : '레드팀'}이 획득한 드래곤은 게임 승률 관점에서 약 <strong className="text-gold-main font-extrabold text-shadow-glow">{(prediction.dragon_gold_value * Math.max(commonStats.blueDragons, commonStats.redDragons)).toLocaleString()} 골드</strong>(1마리당 약 {Math.round(prediction.dragon_gold_value).toLocaleString()} 골드)의 격차를 벌린 것과 동일한 Odds 상승 효과를 가집니다.
             </p>
           </div>
         </div>
       )}
 
-      {/* 4. 모델 정밀 분석 대시보드 */}
+      {/* 5. 모델 정밀 분석 대시보드 */}
       <div className="bg-bg-card border border-border-glass rounded-3xl p-6 shadow-glow">
         <h3 className="text-gold-bright mb-4 text-sm font-bold border-l-4 border-gold-main pl-3">
           🔎 모델 정밀 분석 대시보드
@@ -684,7 +931,7 @@ export default function App() {
         </div>
       </div>
 
-      {/* 5. 🏆 챔피언 선택 모달 */}
+      {/* 6. 🏆 챔피언 선택 모달 */}
       {modalOpen && (
         <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-[2000] flex justify-center items-center p-4">
           <div className="bg-bg-card border-2 border-gold-main rounded-3xl w-full max-w-lg max-h-[80vh] flex flex-col shadow-[0_0_35px_rgba(200,170,110,0.3)] overflow-hidden">
