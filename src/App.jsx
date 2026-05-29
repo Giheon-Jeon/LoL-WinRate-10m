@@ -10,8 +10,7 @@ import {
   Legend
 } from 'chart.js';
 import { X, Shield, Sword, Award, Eye, Coins, Trophy, Flame } from 'lucide-react';
-import { getChampionNameKr, calculateCompositionScores, determineComposition, CHAMPION_NAMES_KR } from './utils/lolEngine';
-import { runModelInference, calculateDragonGoldValue, calculateMLCompositionScore } from './utils/predictEngine';
+import { getChampionNameKr, calculateCompositionScores, determineComposition, CHAMPION_NAMES_KR, runModelInference, calculateDragonGoldValue, calculateMLCompositionScore } from './utils/lolEngine';
 import metricsData from '../models/metrics.json';
 
 ChartJS.register(
