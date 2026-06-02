@@ -60,10 +60,10 @@
 
 | 구분 | 모델 | 역할 | 주요 분석 요소 | 주요 성능 지표 (Test ACC) |
 | :--- | :--- | :--- | :--- | :--- |
-| **🏆 추천** | **Ensemble (Soft Voting)** | LR 40% + XGB 40% + RF 20% 가중 앙상블 | 3개 모델의 다수결 투표로 분산 감소 및 안정성 향상 | **~80%** |
-| **베이스라인** | **Logistic Regression** | 성능 기준점 + 피처별 계수 해석 | 드래곤 가치를 골드로 직접 환산 (1 Dragon ≈ 1,500 Gold) | **79.3%** |
-| **비교** | **Random Forest** | 중간 비교 기준 (의사결정 앙상블) | 비선형 관계 학습 및 중요도 비교 대조 | **78.0%** |
-| **최적화** | **XGBoost (Optuna)** | 최고 성능 달성 (Optuna 20-trial 자동 튜닝) | 부스팅 피처 기여도 분석 및 최적 하이퍼파라미터 도출 | **78.2%** |
+| **🏆 추천** | **Ensemble (Soft Voting)** | LR 40% + XGB 40% + RF 20% 가중 앙상블 | 3개 모델의 다수결 투표로 분산 감소 및 안정성 향상 | **80.1%** |
+| **베이스라인** | **Logistic Regression** | 성능 기준점 + 피처별 계수 해석 | 드래곤 가치를 골드로 직접 환산 (1 Dragon ≈ 1,500 Gold) | **79.0%** |
+| **비교** | **Random Forest** | 중간 비교 기준 (의사결정 앙상블) | 비선형 관계 학습 및 중요도 비교 대조 | **78.5%** |
+| **최적화** | **XGBoost (Optuna)** | 최고 성능 달성 (Optuna 20-trial 자동 튜닝) | 부스팅 피처 기여도 분석 및 최적 하이퍼파라미터 도출 | **78.1%** |
 
 ---
 
@@ -227,7 +227,7 @@ graph TD
   **해결**:
   - **Optuna 20-trial 자동 탐색** 도입 (3-fold StratifiedKFold 교차검증)
   - 탐색 공간: `n_estimators(50~150)`, `max_depth(2~4)`, `learning_rate(0.01~0.1, log)`, `subsample(0.6~0.8)`, `colsample_bytree(0.6~0.8)`
-  - 결과: XGBoost 정확도 **78.2%**로 개선, 최적 파라미터 자동 도출 및 `metrics.json`에 기록
+  - 결과: XGBoost 정확도 **78.1%**로 개선, 최적 파라미터 자동 도출 및 `metrics.json`에 기록
 </details>
 
 <details open>
