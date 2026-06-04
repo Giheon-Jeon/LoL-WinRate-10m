@@ -1,9 +1,10 @@
-import lrModel from '../../models/logistic_regression.json';
-import rfModel from '../../models/random_forest.json';
-import scaler from '../../models/scaler.json';
-import featureOrder from '../../models/feature_names.json';
-import featureOrderTree from '../../models/feature_names_tree.json';
-import mlWinRates from '../../models/champion_ml_win_rates.json';
+import modelData from '../../models/model_data.json';
+const lrModel = modelData.logistic_regression;
+const rfModel = modelData.random_forest;
+const scaler = modelData.scaler;
+const featureOrder = modelData.feature_names;
+const featureOrderTree = modelData.feature_names_tree;
+const mlWinRates = modelData.champion_ml_win_rates;
 import { score as xgbScore } from '../../models/xgboost_code.js';
 
 // 챔피언 한국어 이름 맵핑

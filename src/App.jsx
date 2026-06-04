@@ -12,7 +12,8 @@ import {
 } from 'chart.js';
 import { X, Shield, Sword, Award, Eye, Coins, Trophy, Flame } from 'lucide-react';
 import { getChampionNameKr, calculateCompositionScores, determineComposition, CHAMPION_NAMES_KR, runModelInference, calculateDragonGoldValue, calculateMLCompositionScore, ensembleSoftVoting } from './utils/lolEngine';
-import metricsData from '../models/metrics.json';
+import modelData from '../models/model_data.json';
+const metricsData = modelData.metrics;
 
 ChartJS.register(
   CategoryScale,

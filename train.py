@@ -28,7 +28,7 @@ def train_and_evaluate():
     print("15분 데이터 기반 고도화 머신러닝 모델 학습을 시작합니다...")
     
     # 1. 데이터 로드
-    data_path = os.path.join(os.path.dirname(__file__), "lol_clean_final.csv")
+    data_path = os.path.join(os.path.dirname(__file__), "teamproject", "lol_clean_final.csv")
     if not os.path.exists(data_path):
         raise FileNotFoundError(f"데이터셋을 찾을 수 없습니다: {data_path}")
             
@@ -201,13 +201,6 @@ def train_and_evaluate():
     
     feature_names_lr = list(X_lr.columns)
     feature_names_tree = list(X_tree.columns)
-    
-    with open(os.path.join(models_dir, "feature_names.json"), "w", encoding="utf-8") as f:
-        json.dump(feature_names_lr, f, indent=4, ensure_ascii=False)
-        
-    with open(os.path.join(models_dir, "feature_names_tree.json"), "w", encoding="utf-8") as f:
-        json.dump(feature_names_tree, f, indent=4, ensure_ascii=False)
-        
     print(f"로지스틱 피처 수: {len(feature_names_lr)}, 트리 피처 수: {len(feature_names_tree)}")
 
     # ----------------------------------------------------
@@ -379,13 +372,11 @@ def train_and_evaluate():
     # ----------------------------------------------------
     # 5. 경량화 최적화 및 JS/JSON 포팅 파일 생성
     # ----------------------------------------------------
-    # 1) Logistic Regression JSON 저장
+    # 1) Logistic Regression 데이터 준비
     lr_data = {
         "intercept": float(lr_model.intercept_[0]),
         "coefficients": lr_model.coef_[0].tolist()
     }
-    with open(os.path.join(models_dir, "logistic_regression.json"), "w", encoding="utf-8") as f:
-        json.dump(lr_data, f, indent=4)
         
     # 2) Random Forest JSON 저장
     rf_trees = []
@@ -405,8 +396,7 @@ def train_and_evaluate():
                     int(tree.children_right[i])
                 ])
         rf_trees.append(nodes)
-    with open(os.path.join(models_dir, "random_forest.json"), "w", encoding="utf-8") as f:
-        json.dump(rf_trees, f)
+    # 2) Random Forest 데이터 준비 (트리 분기 및 리프 노드)
         
     # 3) XGBoost m2cgen JavaScript 컴파일 및 저장
     try:
@@ -427,8 +417,7 @@ def train_and_evaluate():
         "mean": scaler.mean_.tolist(),
         "scale": scaler.scale_.tolist()
     }
-    with open(os.path.join(models_dir, "scaler.json"), "w", encoding="utf-8") as f:
-        json.dump(scaler_data, f, indent=4)
+    # 4) 스케일러 파라미터 준비
         
     # 5) 챔피언 기여도 데이터 생성 (더미 탈피, 실제 Coefficient 기반 역산)
     champion_win_rates = {}
@@ -442,15 +431,23 @@ def train_and_evaluate():
         "Random Forest": {},
         "XGBoost": {}
     }
-    with open(os.path.join(models_dir, "champion_ml_win_rates.json"), "w", encoding="utf-8") as f:
-        json.dump(champ_ml_win_rates, f, indent=4, ensure_ascii=False)
+    # 5) 챔피언 기여도 데이터 준비 (실제 Coefficient 기반 역산)
     print("챔피언 기여도 분석 데이터 생성 완료.")
 
-    # 6) 지표 저장
-    metrics_path = os.path.join(models_dir, "metrics.json")
-    with open(metrics_path, "w", encoding="utf-8") as f:
-        json.dump(metrics_report, f, indent=4, ensure_ascii=False)
-    print(f"모델 지표가 저장되었습니다: {metrics_path}")
+    # 6) 단일 통합 JSON 파일 저장 (feature_names, feature_names_tree, logistic_regression, random_forest, scaler, champion_ml_win_rates, metrics)
+    model_data = {
+        "feature_names": feature_names_lr,
+        "feature_names_tree": feature_names_tree,
+        "logistic_regression": lr_data,
+        "random_forest": rf_trees,
+        "scaler": scaler_data,
+        "champion_ml_win_rates": champ_ml_win_rates,
+        "metrics": metrics_report
+    }
+    model_data_path = os.path.join(models_dir, "model_data.json")
+    with open(model_data_path, "w", encoding="utf-8") as f:
+        json.dump(model_data, f, indent=4, ensure_ascii=False)
+    print(f"통합 모델 데이터가 저장되었습니다: {model_data_path}")
         
     return metrics_report
 
